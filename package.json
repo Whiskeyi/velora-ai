@@ -1,0 +1,74 @@
+{
+  "name": "velora-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A streaming-first React component system for agentic AI interfaces.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Whiskeyi/velora-ai.git"
+  },
+  "homepage": "https://velora-ai-components.zhuchjie.chatgpt.site/",
+  "bugs": {
+    "url": "https://github.com/Whiskeyi/velora-ai/issues"
+  },
+  "type": "module",
+  "packageManager": "npm@11.16.0",
+  "engines": {
+    "node": "^20.19.0 || ^22.18.0 || >=24.11.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "vp dev",
+    "build": "vp build",
+    "build:library": "vp pack",
+    "build:all": "vp pack && vp build",
+    "preview": "vp preview",
+    "check": "vp check",
+    "lint": "vp lint",
+    "format": "vp fmt",
+    "test": "vp test run",
+    "typecheck": "vp exec tsc --noEmit",
+    "verify:package": "node scripts/verify-package.mjs",
+    "verify:showcase": "node scripts/verify-showcase-samples.mjs",
+    "verify:site-css": "node scripts/verify-site-css.mjs"
+  },
+  "dependencies": {
+    "katex": "^0.16.22",
+    "lucide-react": "^0.468.0",
+    "mermaid": "^11.12.0",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-live": "^4.1.8",
+    "react-markdown": "^10.1.0",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.37.1",
+    "@types/katex": "^0.16.7",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.26",
+    "@voidzero-dev/vite-plus-core": "0.2.5",
+    "jsdom": "^29.1.1",
+    "react-server-dom-webpack": "19.2.6",
+    "typescript": "5.9.3",
+    "vinext": "0.0.50",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.5",
+    "vite-plus": "0.2.5",
+    "vitest": "4.1.10",
+    "wrangler": "4.92.0"
+  },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.5",
+    "vitest": "4.1.10"
+  }
+}

@@ -1,0 +1,32 @@
+name: Feature request
+description: Propose a component, runtime capability, or interaction improvement.
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What AI interface problem is difficult to solve today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API or interaction
+      description: Include a small API sketch or interaction flow when possible.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This belongs in a reusable component or runtime primitive.
+          required: true
+        - label: I considered accessibility, responsive behavior, and streaming state.
+          required: true

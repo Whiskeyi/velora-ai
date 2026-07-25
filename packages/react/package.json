@@ -1,0 +1,61 @@
+{
+  "name": "@velora-ai/react",
+  "version": "0.1.0",
+  "description": "Streaming-first React primitives for agentic AI products.",
+  "license": "MIT",
+  "author": "Velora AI Contributors",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Whiskeyi/velora-ai.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://velora-ai-components.zhuchjie.chatgpt.site/",
+  "bugs": {
+    "url": "https://github.com/Whiskeyi/velora-ai/issues"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "react",
+    "sse",
+    "streaming",
+    "ui-components"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./styles.css": "./dist/style.css"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "provenance": true
+  },
+  "peerDependencies": {
+    "react": ">=18.3.0",
+    "react-dom": ">=18.3.0"
+  },
+  "dependencies": {
+    "katex": "^0.16.22",
+    "mermaid": "^11.12.0",
+    "react-markdown": "^10.1.0",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "zustand": "^5.0.8"
+  }
+}
