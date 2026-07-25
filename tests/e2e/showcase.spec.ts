@@ -33,6 +33,15 @@ test("component details edit, render, and reset independently", async ({ page },
   await expect(reset).toBeEnabled();
   await reset.click();
   await expect(page.getByPlaceholder("Ask Velora anything…")).toBeVisible();
+
+  const previewAlignment = await page.locator(".live-preview").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { alignItems: style.alignItems, justifyContent: style.justifyContent };
+  });
+  expect(previewAlignment).toEqual({
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
+  });
 });
 
 test("mobile component docs avoid page overflow and expose compact navigation", async ({
@@ -45,6 +54,11 @@ test("mobile component docs avoid page overflow and expose compact navigation", 
   await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Preview" })).toBeVisible();
   await expect(page.locator(".vl-mermaid__canvas svg")).toBeVisible();
+  await expect(page.locator(".vl-mermaid")).toHaveAttribute("data-align", "start");
+  const canvasAlignment = await page
+    .locator(".vl-mermaid__canvas")
+    .evaluate((element) => getComputedStyle(element).justifyItems);
+  expect(canvasAlignment).toBe("start");
 
   const metrics = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,

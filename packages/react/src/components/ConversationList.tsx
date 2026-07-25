@@ -5,6 +5,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
   useCallback,
+  useDeferredValue,
   useMemo,
   useRef,
 } from "react";
@@ -66,6 +67,10 @@ export interface ConversationListProps
   defaultQuery?: string;
   onQueryChange?: (query: string) => void;
   filterConversation?: (conversation: Conversation, query: string) => boolean;
+  /** Text used by the built-in case-insensitive search. Defaults to the conversation title. */
+  getSearchText?: (conversation: Conversation) => string;
+  /** Defers filtering so typing remains responsive for large collections. */
+  deferFiltering?: boolean;
   searchPlaceholder?: string;
   searchLabel?: string;
   groupBy?: (conversation: Conversation) => string;
@@ -98,6 +103,8 @@ export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
       defaultQuery = "",
       onQueryChange,
       filterConversation,
+      getSearchText,
+      deferFiltering = true,
       searchPlaceholder,
       searchLabel,
       groupBy,
@@ -136,6 +143,9 @@ export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
       defaultValue: defaultQuery,
       onChange: onQueryChange,
     });
+    const deferredQuery = useDeferredValue(currentQuery);
+    const effectiveQuery = deferFiltering ? deferredQuery : currentQuery;
+    const filtering = effectiveQuery !== currentQuery;
     const labels = {
       idle: copy.idle,
       unread: copy.unread,
@@ -144,16 +154,17 @@ export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
       ...statusLabels,
     };
     const visibleConversations = useMemo(() => {
-      const normalized = currentQuery.trim();
+      const normalized = effectiveQuery.trim();
       if (!normalized) return conversations;
+      const normalizedLowerCase = normalized.toLocaleLowerCase();
       return conversations.filter((conversation) =>
         filterConversation
           ? filterConversation(conversation, normalized)
-          : (conversation.title ?? "").toLocaleLowerCase().includes(
-              normalized.toLocaleLowerCase(),
-            ),
+          : (getSearchText?.(conversation) ?? conversation.title ?? "")
+              .toLocaleLowerCase()
+              .includes(normalizedLowerCase),
       );
-    }, [conversations, currentQuery, filterConversation]);
+    }, [conversations, effectiveQuery, filterConversation, getSearchText]);
 
     const focusAt = useCallback(
       (index: number) => {
@@ -193,6 +204,8 @@ export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
         className={cx(componentClass, classNames?.root, className)}
         style={composeStyles(styles?.root, style)}
         aria-label={resolvedAriaLabel}
+        aria-busy={filtering || undefined}
+        data-filtering={filtering ? "true" : undefined}
         data-slot="root"
       >
         {searchable || onCreate ? (

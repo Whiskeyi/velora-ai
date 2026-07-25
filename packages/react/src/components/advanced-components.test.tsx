@@ -309,7 +309,7 @@ describe("advanced component interaction contracts", () => {
     const onCopy = vi.fn();
     const view = await render(
       <div>
-        <Formula formula="E = mc^2" showCopy onCopy={onCopy} />
+        <Formula formula="E = mc^2" displayMode align="center" showCopy onCopy={onCopy} />
         <StreamingIndicator label="Uploading context" progress={42} visibleLabel />
       </div>,
     );
@@ -317,6 +317,7 @@ describe("advanced component interaction contracts", () => {
     await act(async () => view.querySelector<HTMLButtonElement>(".vl-formula__copy")?.click());
     expect(writeText).toHaveBeenCalledWith("E = mc^2");
     expect(onCopy).toHaveBeenCalledWith("E = mc^2", true);
+    expect(view.querySelector(".vl-formula")?.getAttribute("data-align")).toBe("center");
     const progress = view.querySelector<HTMLElement>("[role='progressbar']");
     expect(progress?.getAttribute("aria-valuenow")).toBe("42");
     expect(progress?.getAttribute("aria-label")).toBe("Uploading context");
@@ -331,5 +332,15 @@ describe("advanced component interaction contracts", () => {
     expect(indicator?.hasAttribute("role")).toBe(false);
     expect(indicator?.hasAttribute("aria-live")).toBe(false);
     expect(indicator?.hasAttribute("aria-valuenow")).toBe(false);
+  });
+
+  it("stops determinate motion when progress reaches completion", async () => {
+    const view = await render(
+      <StreamingIndicator label="Complete" progress={100} visibleLabel />,
+    );
+    const indicator = view.querySelector<HTMLElement>(".vl-streaming-indicator");
+    expect(indicator?.getAttribute("data-active")).toBe("false");
+    expect(indicator?.getAttribute("role")).toBe("progressbar");
+    expect(indicator?.getAttribute("aria-valuenow")).toBe("100");
   });
 });

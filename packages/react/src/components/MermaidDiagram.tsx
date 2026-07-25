@@ -18,6 +18,7 @@ export type SafeMermaidConfig = Omit<
   MermaidConfig,
   "securityLevel" | "startOnLoad" | "suppressErrorRendering"
 >;
+export type MermaidAlignment = "start" | "center" | "end";
 
 let mermaidModule: Promise<typeof import("mermaid")> | undefined;
 let renderQueue: Promise<unknown> = Promise.resolve();
@@ -83,6 +84,8 @@ function scheduleRender(
 export interface MermaidDiagramProps
   extends Omit<HTMLAttributes<HTMLDivElement>, "children" | "onError" | "title"> {
   chart: string;
+  /** Inline-axis alignment of the diagram canvas. Defaults to start. */
+  align?: MermaidAlignment;
   /** Mermaid options with Velora's strict security invariants intentionally excluded. */
   config?: SafeMermaidConfig;
   title?: ReactNode;
@@ -111,6 +114,7 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
   function MermaidDiagram(
     {
       chart,
+      align = "start",
       config = {},
       title,
       loading,
@@ -173,7 +177,7 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
       setResult(null);
 
       if (!chart.trim()) {
-        const emptyError = new Error("Mermaid definition is empty.");
+        const emptyError = new Error(copy.empty);
         setError(emptyError);
         setPending(false);
         callbacksRef.current.onError?.(emptyError);
@@ -201,7 +205,7 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
       return () => {
         active = false;
       };
-    }, [cacheKey, chart, renderId]);
+    }, [cacheKey, chart, copy.empty, renderId]);
 
     useEffect(() => {
       if (result?.bindFunctions && rootRef.current) {
@@ -256,12 +260,13 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
         className={cx(componentClass, className)}
         aria-busy={pending || undefined}
         data-state={pending ? "loading" : error ? "error" : "ready"}
+        data-align={align}
       >
         {title != null ? <div className="vl-mermaid__title">{title}</div> : null}
         {pending ? (
           <div className="vl-mermaid__loading" role="status">
             {loading ?? (
-              <StreamingIndicator label="Rendering diagram" visibleLabel />
+              <StreamingIndicator label={copy.rendering} visibleLabel />
             )}
           </div>
         ) : null}
@@ -271,7 +276,7 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
               <>
                 <span id={errorId}>{error.message}</span>
                 <button type="button" onClick={retry} aria-describedby={errorId}>
-                  Retry
+                  {copy.retry}
                 </button>
               </>
             )}

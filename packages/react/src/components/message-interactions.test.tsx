@@ -9,6 +9,7 @@ import { MessageActions } from "./MessageActions";
 import { MessageBranchNavigator } from "./MessageBranchNavigator";
 import { MessageBubble } from "./MessageBubble";
 import { MessageList, type MessageListRenderContext } from "./MessageList";
+import { VeloraProvider } from "./VeloraProvider";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
@@ -290,6 +291,43 @@ describe("MessageBranchNavigator", () => {
     expect(onIndexChange).toHaveBeenCalledWith(1);
     expect(view.querySelector("[role='status']")?.textContent).toBe("1 / 2");
   });
+
+  it("maps horizontal keyboard navigation to the reading direction", async () => {
+    const onIndexChange = vi.fn();
+    const view = await render(
+      <VeloraProvider direction="rtl">
+        <MessageBranchNavigator
+          count={3}
+          defaultIndex={1}
+          onIndexChange={onIndexChange}
+        />
+      </VeloraProvider>,
+    );
+    const navigator = view.querySelector<HTMLElement>("[role='group']");
+    expect(navigator?.getAttribute("data-direction")).toBe("rtl");
+
+    await act(async () => {
+      navigator?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowLeft",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(onIndexChange).toHaveBeenLastCalledWith(2);
+
+    await act(async () => {
+      navigator?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowRight",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(onIndexChange).toHaveBeenLastCalledWith(1);
+  });
 });
 
 describe("MessageBubble interaction slots", () => {
@@ -322,6 +360,18 @@ describe("MessageBubble interaction slots", () => {
 });
 
 describe("MessageList streaming behavior", () => {
+  it("keeps empty content at the reading start unless centering is explicit", async () => {
+    const view = await render(<MessageList messages={[]} />);
+    expect(
+      view.querySelector(".vl-message-list")?.getAttribute("data-empty-placement"),
+    ).toBe("start");
+
+    await rerender(<MessageList messages={[]} emptyPlacement="center" />);
+    expect(
+      view.querySelector(".vl-message-list")?.getAttribute("data-empty-placement"),
+    ).toBe("center");
+  });
+
   it("resets follow, activity, and scroll state when the conversation changes", async () => {
     const first = message("launch-1", "user");
     const partial = message("launch-2", "assistant", {

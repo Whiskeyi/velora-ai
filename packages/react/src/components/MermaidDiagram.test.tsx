@@ -17,6 +17,7 @@ vi.mock("mermaid", () => ({
 }));
 
 import { MermaidDiagram } from "./MermaidDiagram";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true;
@@ -62,7 +63,11 @@ describe("MermaidDiagram safety and recovery", () => {
       suppressErrorRendering: false,
     } as unknown as ComponentProps<typeof MermaidDiagram>["config"];
     const view = await render(
-      <MermaidDiagram chart="flowchart LR\nA --> B" config={attemptedOverride} />,
+      <MermaidDiagram
+        chart="flowchart LR\nA --> B"
+        config={attemptedOverride}
+        align="end"
+      />,
     );
 
     await waitFor(() => view.querySelector(".vl-mermaid__canvas") != null);
@@ -77,6 +82,7 @@ describe("MermaidDiagram safety and recovery", () => {
     expect(view.querySelector(".vl-mermaid")?.getAttribute("data-state")).toBe(
       "ready",
     );
+    expect(view.querySelector(".vl-mermaid")?.getAttribute("data-align")).toBe("end");
   });
 
   it("retries a rejected render and replaces the error with a diagram", async () => {
@@ -141,5 +147,19 @@ describe("MermaidDiagram safety and recovery", () => {
     expect(writeText).toHaveBeenCalledWith("flowchart LR\nA --> B");
     expect(onCopySource).toHaveBeenCalledWith("flowchart LR\nA --> B", true);
     expect(view.textContent).toContain("Copied");
+  });
+
+  it("forwards nested diagram behavior through MarkdownRenderer", async () => {
+    mermaidMocks.render.mockResolvedValue({ svg: "<svg><text>Nested</text></svg>" });
+    const view = await render(
+      <MarkdownRenderer
+        content={"```mermaid\nflowchart LR\nA --> B\n```"}
+        mermaidProps={{ align: "center", interactive: false }}
+      />,
+    );
+
+    await waitFor(() => view.querySelector(".vl-mermaid__canvas") != null);
+    expect(view.querySelector(".vl-mermaid")?.getAttribute("data-align")).toBe("center");
+    expect(view.querySelector(".vl-mermaid__controls")).toBeNull();
   });
 });

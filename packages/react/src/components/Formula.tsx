@@ -11,6 +11,8 @@ import {
 import { useComponentClass, useVelora } from "./VeloraProvider";
 import { cx, errorMessage } from "./utils";
 
+export type FormulaAlignment = "start" | "center" | "end";
+
 export interface FormulaProps
   extends Omit<
     HTMLAttributes<HTMLSpanElement>,
@@ -18,6 +20,8 @@ export interface FormulaProps
   > {
   formula: string;
   displayMode?: boolean;
+  /** Inline-axis alignment. Defaults to start to preserve document reading flow. */
+  align?: FormulaAlignment;
   options?: Omit<KatexOptions, "displayMode">;
   renderError?: (error: Error, formula: string) => ReactNode;
   showCopy?: boolean;
@@ -30,6 +34,7 @@ export const Formula = forwardRef<HTMLSpanElement, FormulaProps>(function Formul
   {
     formula,
     displayMode = false,
+    align = "start",
     options,
     renderError,
     showCopy = false,
@@ -95,6 +100,7 @@ export const Formula = forwardRef<HTMLSpanElement, FormulaProps>(function Formul
       ref={ref}
       className={cx(componentClass, className)}
       data-display={displayMode ? "block" : "inline"}
+      data-align={align}
       data-error={rendered.error ? "true" : undefined}
     >
       <span className="vl-formula__content">

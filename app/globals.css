@@ -1260,14 +1260,14 @@ main {
   position: relative;
   z-index: 2;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   width: 100%;
   min-width: 0;
   min-height: 100%;
   overflow: auto;
   padding: 22px;
-  margin: auto;
+  margin: 0;
   transition:
     max-width 220ms ease,
     padding 220ms ease,
@@ -1296,18 +1296,16 @@ main {
 
 .live-narrow {
   width: min(100%, 340px) !important;
-  margin-inline: auto;
 }
 
 .live-message {
   width: min(100%, 500px) !important;
-  margin-inline: auto;
 }
 
 .live-centered {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   width: 100% !important;
 }
 
@@ -1437,13 +1435,11 @@ main {
 
 .live-composer-demo {
   width: min(100%, 520px) !important;
-  margin-inline: auto;
 }
 
 .live-message-list-demo {
   width: min(100%, 520px) !important;
   height: 390px;
-  margin-inline: auto;
 }
 
 .live-follow-list {
@@ -1467,19 +1463,19 @@ main {
 .live-markdown-demo,
 .live-streaming-demo {
   width: min(100%, 520px) !important;
-  margin-inline: auto;
 }
 
 .live-formula-stage,
 .live-stream-state {
   display: grid;
-  min-height: 150px;
+  min-height: 112px;
   padding: 18px;
   border: 1px solid rgba(182, 200, 255, 0.11);
   border-radius: 14px;
   background: rgba(8, 11, 17, 0.58);
-  place-items: center;
-  text-align: center;
+  align-content: start;
+  justify-items: start;
+  text-align: start;
 }
 
 .live-demo-error {
@@ -1491,7 +1487,8 @@ main {
   font-size: 9px;
   line-height: 1.5;
   overflow-wrap: anywhere;
-  place-items: center;
+  align-content: start;
+  justify-items: start;
 }
 
 .live-markdown-demo > .vl-markdown {

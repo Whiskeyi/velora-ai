@@ -6,6 +6,7 @@ import {
   type SetStateAction,
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -90,6 +91,48 @@ export function useMediaQuery(query: string): boolean {
   }, [query]);
 
   return matches;
+}
+
+/**
+ * Runs visual elapsed-time updates only while the document is visible.
+ * Keeping the latest callback in a ref avoids restarting the interval when a
+ * consumer passes an inline formatter or state updater.
+ */
+export function useDocumentVisibleInterval(
+  callback: () => void,
+  delay: number,
+  enabled: boolean,
+): void {
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
+  useEffect(() => {
+    if (!enabled || typeof window === "undefined") return undefined;
+
+    let interval: number | undefined;
+    const stop = () => {
+      if (interval !== undefined) window.clearInterval(interval);
+      interval = undefined;
+    };
+    const start = () => {
+      stop();
+      if (typeof document === "undefined" || document.visibilityState === "visible") {
+        callbackRef.current();
+        interval = window.setInterval(() => callbackRef.current(), Math.max(100, delay));
+      }
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") start();
+      else stop();
+    };
+
+    start();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [delay, enabled]);
 }
 
 export function errorMessage(error: unknown): string {

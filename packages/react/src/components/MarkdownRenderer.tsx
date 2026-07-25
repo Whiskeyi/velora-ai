@@ -16,7 +16,11 @@ import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { CodeBlock, type CodeBlockProps, type CodeHighlighter } from "./CodeBlock";
-import { MermaidDiagram, type SafeMermaidConfig } from "./MermaidDiagram";
+import {
+  MermaidDiagram,
+  type MermaidDiagramProps,
+  type SafeMermaidConfig,
+} from "./MermaidDiagram";
 import { useComponentClass, useVelora } from "./VeloraProvider";
 import { cx } from "./utils";
 
@@ -40,6 +44,7 @@ export interface MarkdownRendererProps
     Omit<CodeBlockProps, "code" | "language" | "highlighter" | "children">
   >;
   mermaidConfig?: SafeMermaidConfig;
+  mermaidProps?: Partial<Omit<MermaidDiagramProps, "chart" | "config">>;
 }
 
 function stabilizeStreamingContent(content: string): string {
@@ -84,6 +89,7 @@ function MarkdownRendererInner(
     codeHighlighter,
     codeBlockProps,
     mermaidConfig,
+    mermaidProps,
     className,
     skipHtml = true,
     allowElement,
@@ -103,10 +109,13 @@ function MarkdownRendererInner(
   const deferredContent = useDeferredValue(content);
   const candidateContent =
     streaming && streamingMode === "deferred" ? deferredContent : content;
-  const renderedContent =
-    streaming && stabilizeIncompleteBlocks
-      ? stabilizeStreamingContent(candidateContent)
-      : candidateContent;
+  const renderedContent = useMemo(
+    () =>
+      streaming && stabilizeIncompleteBlocks
+        ? stabilizeStreamingContent(candidateContent)
+        : candidateContent,
+    [candidateContent, stabilizeIncompleteBlocks, streaming],
+  );
 
   const markdownComponents = useMemo<Components>(() => {
     const renderBlockCode = (source: string, codeClassName?: string) => {
@@ -114,7 +123,13 @@ function MarkdownRendererInner(
       const language = match?.[1];
 
       if (language?.toLowerCase() === "mermaid") {
-        return <MermaidDiagram chart={source} config={mermaidConfig} />;
+        return (
+          <MermaidDiagram
+            {...mermaidProps}
+            chart={source}
+            config={mermaidConfig}
+          />
+        );
       }
 
       return (
@@ -167,7 +182,7 @@ function MarkdownRendererInner(
       },
     };
     return { ...defaults, ...components };
-  }, [codeBlockProps, codeHighlighter, components, mermaidConfig]);
+  }, [codeBlockProps, codeHighlighter, components, mermaidConfig, mermaidProps]);
 
   const mergedRemarkPlugins = useMemo(
     () => [remarkGfm, remarkMath, ...(remarkPlugins ?? [])],

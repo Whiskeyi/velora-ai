@@ -3,6 +3,7 @@ import {
   type HTMLAttributes,
   type ReactNode,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -189,8 +190,14 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
     const pendingRef = useRef<MessageActionKind | null>(null);
     const mountedRef = useRef(true);
     const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const mergedPendingLabels = { ...copy.pending, ...pendingLabels };
-    const mergedSuccessLabels = { ...copy.success, ...successLabels };
+    const mergedPendingLabels = useMemo(
+      () => ({ ...copy.pending, ...pendingLabels }),
+      [copy.pending, pendingLabels],
+    );
+    const mergedSuccessLabels = useMemo(
+      () => ({ ...copy.success, ...successLabels }),
+      [copy.success, successLabels],
+    );
 
     useEffect(() => {
       mountedRef.current = true;
@@ -235,7 +242,7 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
           setStatus(null);
           setActionError(
             errorLabel?.(error, context) ??
-              `${mergedPendingLabels[action]} failed: ${errorMessage(error)}`,
+              copy.actionFailed(mergedPendingLabels[action], errorMessage(error)),
           );
           onActionError?.(error, context);
         }

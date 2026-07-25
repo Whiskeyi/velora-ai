@@ -64,6 +64,14 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  COMPONENT_KEYS,
+  isSampleKey,
+  type SampleKey,
+} from "./component-registry";
+
+export { COMPONENT_KEYS, isSampleKey };
+export type { SampleKey };
 
 const LiveProvider = lazy(() =>
   import("react-live").then((module) => ({ default: module.LiveProvider })),
@@ -77,24 +85,6 @@ const LiveError = lazy(() =>
 const LivePreview = lazy(() =>
   import("react-live").then((module) => ({ default: module.LivePreview })),
 );
-
-export type SampleKey =
-  | "agent-shell"
-  | "velora-provider"
-  | "conversation-list"
-  | "prompt-composer"
-  | "message-bubble"
-  | "message-actions"
-  | "message-branch-navigator"
-  | "message-list"
-  | "reasoning-panel"
-  | "agent-steps"
-  | "code-block"
-  | "formula"
-  | "markdown-renderer"
-  | "mermaid-diagram"
-  | "streaming-indicator"
-  | "tool-call-card";
 
 type Sample = {
   key: SampleKey;
@@ -675,11 +665,13 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
       props: [
         "conversations/activeId/onActiveChange: keep selection controlled.",
         "searchable, query, onQueryChange: support internal or externally owned search state.",
+        "deferFiltering/getSearchText: keep large lists responsive and define the searchable business text.",
         "onCreate: wire a new-session command into the list header.",
         "getDescription/getMeta/getStatus/groupBy: adapt any business data shape.",
       ],
       interactions: [
         "Search keeps the selected conversation stable when possible.",
+        "Filtering can trail keystrokes without blocking input, and empty results remain start-aligned in reading flow.",
         "Create can clear the query and immediately select the new item.",
         "Status indicators separate unread, streaming, idle, and error feedback.",
       ],
@@ -699,11 +691,13 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
       props: [
         "conversations/activeId/onActiveChange：让选择保持受控。",
         "searchable、query、onQueryChange：支持内部搜索或业务外部搜索状态。",
+        "deferFiltering/getSearchText：让大列表输入保持流畅，并定义参与搜索的业务文本。",
         "onCreate：把新建会话命令接到列表头部。",
         "getDescription/getMeta/getStatus/groupBy：适配任意业务数据结构。",
       ],
       interactions: [
         "搜索时尽量保持当前选中会话稳定。",
+        "过滤可以滞后于键入而不阻塞输入，空结果默认保持在阅读流起点。",
         "新建后可清空搜索并立即选中新会话。",
         "状态标识清楚区分未读、生成中、空闲和错误。",
       ],
@@ -926,11 +920,13 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
       props: [
         "messages/conversationKey: render a stable dataset and reset internal state on session switch.",
         "autoScroll/followThreshold/showJumpToLatest: tune follow behavior.",
+        "empty/emptyPlacement: provide an empty state that starts in reading flow or explicitly centers.",
         "onReachStart/onReachStartError: load older messages and surface failures.",
         "renderMessage/getLiveAnnouncement: customize rows and concise announcements.",
       ],
       interactions: [
         "Scrolling up transfers control to the reader instead of snapping to new tokens.",
+        "Empty content is start-aligned by default; centering is an explicit product decision.",
         "Prepending stable-ID history preserves visual position, including late rich-content height changes.",
         "Jump to latest clears unseen activity only after the list actually reaches the bottom.",
       ],
@@ -950,11 +946,13 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
       props: [
         "messages/conversationKey：渲染稳定数据集，并在会话切换时重置内部状态。",
         "autoScroll/followThreshold/showJumpToLatest：调节跟随行为。",
+        "empty/emptyPlacement：提供默认位于阅读起点、也可显式居中的空状态。",
         "onReachStart/onReachStartError：加载更早消息并暴露失败。",
         "renderMessage/getLiveAnnouncement：自定义消息行和简洁播报。",
       ],
       interactions: [
         "向上滚动后控制权交给读者，不会被新 token 强行拉到底部。",
+        "空内容默认起始对齐；是否居中由产品显式决定。",
         "以稳定 ID prepend 历史时会保持视觉位置，包括富内容后续高度变化。",
         "Jump to latest 只有在列表真正到底后才清空未读活动。",
       ],
@@ -1125,6 +1123,7 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
       ],
       props: [
         "formula/displayMode: choose source and inline or block layout.",
+        "align: choose start, center, or end; block math defaults to start.",
         "options: pass safe KaTeX configuration.",
         "showCopy/onCopy: expose source-copy interaction.",
         "renderError: recover from invalid generated LaTeX.",
@@ -1132,7 +1131,7 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
       interactions: [
         "Parse failures render a contained fallback instead of corrupting message layout.",
         "Copy preserves the original source string.",
-        "Inline mode fits inside surrounding prose; display mode centers larger equations.",
+        "Inline mode fits surrounding prose; display alignment changes only when align is explicit.",
       ],
       integration:
         "Keep KaTeX options strict for untrusted model output and use MarkdownRenderer when formulas live inside full Markdown responses.",
@@ -1149,6 +1148,7 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
       ],
       props: [
         "formula/displayMode：选择源公式和行内/块级布局。",
+        "align：选择 start、center 或 end；块级公式默认从阅读起点开始。",
         "options：传入安全的 KaTeX 配置。",
         "showCopy/onCopy：提供复制源公式交互。",
         "renderError：从无效生成 LaTeX 中恢复。",
@@ -1156,7 +1156,7 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
       interactions: [
         "解析失败会渲染受控 fallback，不破坏消息布局。",
         "复制保留原始源字符串。",
-        "行内模式适合正文，展示模式适合较大公式居中显示。",
+        "行内模式适合正文；只有显式设置 align 才改变展示公式对齐。",
       ],
       integration:
         "对不可信模型输出保持严格 KaTeX 配置；完整 Markdown 回复中的公式建议交给 MarkdownRenderer 组合处理。",
@@ -1176,7 +1176,7 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
       props: [
         "content/streaming: render static or in-progress Markdown.",
         "streamingMode/stabilizeIncompleteBlocks: control progressive parsing behavior.",
-        "codeBlockProps/mermaidConfig: customize nested renderers.",
+        "codeBlockProps/mermaidConfig/mermaidProps: customize nested renderers and explicit diagram alignment.",
         "components: override Markdown nodes when product UI requires it.",
       ],
       interactions: [
@@ -1200,7 +1200,7 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
       props: [
         "content/streaming：渲染静态或进行中的 Markdown。",
         "streamingMode/stabilizeIncompleteBlocks：控制渐进解析行为。",
-        "codeBlockProps/mermaidConfig：定制内部渲染器。",
+        "codeBlockProps/mermaidConfig/mermaidProps：定制内部渲染器和显式图表对齐。",
         "components：在产品 UI 需要时覆盖 Markdown 节点。",
       ],
       interactions: [
@@ -1225,12 +1225,14 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
       ],
       props: [
         "chart/title/config: provide source and safe Mermaid configuration.",
+        "align: keep the canvas at the reading start by default or opt into center/end.",
         "interactive/zoom/onZoomChange: control viewport scaling.",
         "showCopySource/onCopySource: let users inspect or reuse the diagram source.",
         "renderError/onError/onRender: recover from invalid definitions.",
       ],
       interactions: [
         "Mermaid loads only when a diagram is rendered.",
+        "Loading, failure, and diagram content keep the same horizontal anchor.",
         "Invalid diagrams stay contained and can be repaired or retried.",
         "Zoom state can be controlled by product UI or local component state.",
       ],
@@ -1249,12 +1251,14 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
       ],
       props: [
         "chart/title/config：提供源文本和安全 Mermaid 配置。",
+        "align：图表默认位于阅读起点，也可显式选择 center/end。",
         "interactive/zoom/onZoomChange：控制视口缩放。",
         "showCopySource/onCopySource：让用户查看或复用图表源代码。",
         "renderError/onError/onRender：从无效定义中恢复。",
       ],
       interactions: [
         "只有真正渲染图表时才加载 Mermaid。",
+        "加载、失败与图表正文保持同一水平锚点。",
         "无效图表会被限制在组件内，并可修复或重试。",
         "缩放状态可以由业务 UI 或组件本地状态控制。",
       ],
@@ -1479,6 +1483,11 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
         defaultValue: "false / uncontrolled",
       },
       {
+        name: "deferFiltering/getSearchText",
+        type: "boolean / (conversation) => string",
+        defaultValue: "true / conversation.title",
+      },
+      {
         name: "getDescription/getMeta/getStatus/groupBy",
         type: "(conversation) => ReactNode | string",
         defaultValue: "built-in defaults",
@@ -1563,6 +1572,11 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
         type: "boolean / number / boolean",
         defaultValue: "true / 72 / true",
       },
+      {
+        name: "empty/emptyPlacement",
+        type: 'ReactNode / "start" | "center"',
+        defaultValue: 'built-in / "start"',
+      },
       { name: "onReachStart/onReachStartError", type: "(element) => void | Promise<void>", defaultValue: "undefined" },
       { name: "getLiveAnnouncement", type: "(message, context) => string | null", defaultValue: "built-in concise labels" },
     ],
@@ -1615,6 +1629,7 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
     props: [
       { name: "formula", type: "string", defaultValue: "—", required: true },
       { name: "displayMode", type: "boolean", defaultValue: "false" },
+      { name: "align", type: '"start" | "center" | "end"', defaultValue: '"start"' },
       { name: "options", type: "Omit<KatexOptions, 'displayMode'>", defaultValue: "undefined" },
       { name: "renderError", type: "(error: Error, formula: string) => ReactNode", defaultValue: "undefined" },
       { name: "showCopy/onCopy", type: "boolean / (formula, success) => void", defaultValue: "false" },
@@ -1630,7 +1645,11 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
         defaultValue: "false / deferred / true",
       },
       { name: "codeHighlighter/codeBlockProps", type: "CodeHighlighter / Partial<CodeBlockProps>", defaultValue: "undefined" },
-      { name: "mermaidConfig", type: "SafeMermaidConfig", defaultValue: "undefined" },
+      {
+        name: "mermaidConfig/mermaidProps",
+        type: "SafeMermaidConfig / Partial<MermaidDiagramProps>",
+        defaultValue: "undefined",
+      },
       { name: "components", type: "react-markdown Components", defaultValue: "built-in components" },
     ],
   },
@@ -1639,6 +1658,7 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
     props: [
       { name: "chart", type: "string", defaultValue: "—", required: true },
       { name: "config", type: "SafeMermaidConfig", defaultValue: "{}" },
+      { name: "align", type: '"start" | "center" | "end"', defaultValue: '"start"' },
       {
         name: "interactive/zoom/onZoomChange",
         type: "boolean / number / (zoom: number) => void",
@@ -2738,6 +2758,7 @@ render(<Demo />);`,
     code: `function Demo() {
   const [invalid, setInvalid] = useState(false);
   const [displayMode, setDisplayMode] = useState(true);
+  const [align, setAlign] = useState("start");
   const [event, setEvent] = useState("HTML + MathML ready");
   const formula = invalid
     ? String.raw\`\\definitelyUnknown{1\`
@@ -2752,12 +2773,16 @@ render(<Demo />);`,
         <button type="button" onClick={() => setDisplayMode((value) => !value)}>
           {displayMode ? "Use inline mode" : "Use display mode"}
         </button>
-        <output>{invalid ? "Error fallback" : displayMode ? "Display math" : "Inline math"}</output>
+        <button type="button" onClick={() => setAlign((value) => value === "start" ? "center" : value === "center" ? "end" : "start")}>
+          Align: {align}
+        </button>
+        <output>{invalid ? "Error fallback" : displayMode ? "Display math · " + align : "Inline math"}</output>
       </div>
       <div className="live-formula-stage">
         <Formula
           formula={formula}
           displayMode={displayMode}
+          align={align}
           options={{ throwOnError: true }}
           showCopy
           onCopy={(_source, success) => setEvent(success ? "LaTeX copied" : "Clipboard unavailable")}
@@ -2787,6 +2812,7 @@ function Demo() {
   const [mode, setMode] = useState("stream");
   const [status, setStatus] = useState("Rendering stream diagram…");
   const [zoom, setZoom] = useState(1);
+  const [align, setAlign] = useState("start");
   const choose = (next) => {
     setMode(next);
     setZoom(1);
@@ -2799,10 +2825,14 @@ function Demo() {
         <button type="button" onClick={() => choose("stream")}>Event path</button>
         <button type="button" onClick={() => choose("loop")}>Sequence</button>
         <button type="button" onClick={() => choose("error")}>Show error</button>
+        <button type="button" onClick={() => setAlign((value) => value === "start" ? "center" : "start")}>
+          Align: {align}
+        </button>
       </div>
       <MermaidDiagram
         title={mode === "loop" ? "Prompt sequence" : "Streaming event path"}
         chart={charts[mode]}
+        align={align}
         config={{ theme: "dark" }}
         interactive
         zoom={zoom}
@@ -2889,6 +2919,7 @@ function Demo() {
         stabilizeIncompleteBlocks
         codeBlockProps={{ showWrapToggle: true, collapsible: true, collapseAfterLines: 6, showDownload: true }}
         mermaidConfig={{ theme: "dark" }}
+        mermaidProps={{ align: "start" }}
       />
     </div>
   );
@@ -2919,7 +2950,7 @@ render(<Demo />);`,
   }, [active, progress >= 100]);
 
   return (
-    <div className="live-demo live-centered live-streaming-demo">
+    <div className="live-demo live-streaming-demo">
       <div className="live-demo-toolbar">
         <button type="button" onClick={() => setActive((value) => !value)}>
           {active ? "Pause" : "Start"}
@@ -3025,8 +3056,6 @@ render(<Demo />);`,
   },
 ];
 
-export const COMPONENT_KEYS = samples.map((sample) => sample.key);
-
 function getSiteBasePath(): string {
   if (typeof window === "undefined") return "";
   return window.location.pathname === "/velora-ai" ||
@@ -3041,10 +3070,6 @@ function getHomeHref(fragment = ""): string {
 
 function getComponentHref(key: SampleKey): string {
   return `${getSiteBasePath()}/components/${key}/`;
-}
-
-export function isSampleKey(value: string): value is SampleKey {
-  return COMPONENT_KEYS.includes(value as SampleKey);
 }
 
 function BrandMark() {

@@ -14,6 +14,7 @@ import {
   cx,
   type SemanticClassNames,
   type SemanticStyles,
+  useDocumentVisibleInterval,
   useControllableState,
 } from "./utils";
 
@@ -133,17 +134,11 @@ export const ReasoningPanel = forwardRef<HTMLElement, ReasoningPanelProps>(funct
     previousStatusRef.current = status;
   }, [startedAt, status]);
 
-  useEffect(() => {
-    if (!showElapsed || duration != null || elapsedMs !== undefined || status !== "running") {
-      return undefined;
-    }
-
-    const interval = window.setInterval(
-      () => setNow(Date.now()),
-      Math.max(100, elapsedUpdateInterval),
-    );
-    return () => window.clearInterval(interval);
-  }, [duration, elapsedMs, elapsedUpdateInterval, showElapsed, status]);
+  useDocumentVisibleInterval(
+    () => setNow(Date.now()),
+    elapsedUpdateInterval,
+    showElapsed && duration == null && elapsedMs === undefined && status === "running",
+  );
 
   useEffect(() => {
     if (!collapsible || manualOpenRef.current || autoOpen === "never") return;

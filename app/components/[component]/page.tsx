@@ -1,9 +1,6 @@
 import { notFound } from "next/navigation";
-import {
-  COMPONENT_KEYS,
-  ComponentDetailClient,
-  isSampleKey,
-} from "../../showcase-client";
+import { COMPONENT_KEYS, isSampleKey } from "../../component-registry";
+import { ComponentDetailClient } from "../../showcase-client";
 
 export function generateStaticParams() {
   return COMPONENT_KEYS.map((component) => ({ component }));

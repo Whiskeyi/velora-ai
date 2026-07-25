@@ -26,6 +26,7 @@ export interface MessageListRenderContext {
 }
 
 export type MessageListLiveActivityKind = "added" | "complete" | "error" | "aborted";
+export type MessageListEmptyPlacement = "start" | "center";
 
 export interface MessageListLiveActivityContext {
   kind: MessageListLiveActivityKind;
@@ -39,6 +40,8 @@ export interface MessageListProps extends Omit<HTMLAttributes<HTMLDivElement>, "
   conversationKey?: string | number;
   renderMessage?: (message: AgentMessage, context: MessageListRenderContext) => ReactNode;
   empty?: ReactNode;
+  /** Empty-state placement. Start keeps the state in reading flow; center is opt-in. */
+  emptyPlacement?: MessageListEmptyPlacement;
   autoScroll?: boolean;
   /** Distance from the bottom, in pixels, that still counts as following the output. */
   followThreshold?: number;
@@ -158,6 +161,7 @@ function MessageListInner(
     conversationKey,
     renderMessage,
     empty,
+    emptyPlacement = "start",
     autoScroll = true,
     followThreshold = 72,
     reachStartThreshold = 48,
@@ -551,6 +555,7 @@ function MessageListInner(
       tabIndex={tabIndex}
       data-following={following ? "true" : "false"}
       data-new-activity-count={newActivityCount}
+      data-empty-placement={emptyPlacement}
     >
       <div ref={contentRef} className="vl-message-list__content">
         {messages.length === 0 ? (

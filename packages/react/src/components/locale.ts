@@ -32,6 +32,15 @@ export interface VeloraMessages {
     retryAttachment: (fileName: string) => string;
     uploading: string;
     uploadFailed: string;
+    sending: string;
+    generating: string;
+    stopping: string;
+    notAccepted: string;
+    fileTypeRejected: (fileName: string) => string;
+    fileTooLarge: (fileName: string, limit: string) => string;
+    attachmentLimit: (limit: number) => string;
+    duplicateAttachment: (fileName: string) => string;
+    attachmentCreationFailed: (fileName: string, reason: string) => string;
   };
   messageBubble: {
     system: string;
@@ -68,6 +77,7 @@ export interface VeloraMessages {
     copied: string;
     pending: Record<"copy" | "regenerate" | "edit" | "like" | "dislike", string>;
     success: Record<"copy" | "regenerate" | "edit" | "like" | "dislike", string>;
+    actionFailed: (actionLabel: string, error: string) => string;
   };
   messageBranchNavigator: {
     ariaLabel: string;
@@ -126,6 +136,7 @@ export interface VeloraMessages {
     collapse: string;
     download: string;
     retryHighlight: string;
+    highlightUnavailable: (error: string) => string;
   };
   formula: {
     copy: string;
@@ -139,6 +150,9 @@ export interface VeloraMessages {
     copySource: string;
     copied: string;
     diagram: string;
+    rendering: string;
+    empty: string;
+    retry: string;
   };
   markdownRenderer: {
     streaming: string;
@@ -188,6 +202,16 @@ export const enUS: VeloraMessages = {
     retryAttachment: (fileName) => `Retry ${fileName}`,
     uploading: "Uploading",
     uploadFailed: "Upload failed",
+    sending: "Sending",
+    generating: "Generating",
+    stopping: "Stopping",
+    notAccepted: "The message was not accepted. Try again.",
+    fileTypeRejected: (fileName) => `${fileName} is not an accepted file type.`,
+    fileTooLarge: (fileName, limit) => `${fileName} exceeds the ${limit} limit.`,
+    attachmentLimit: (limit) => `Only ${limit} attachments are allowed.`,
+    duplicateAttachment: (fileName) => `${fileName} has a duplicate attachment id.`,
+    attachmentCreationFailed: (fileName, reason) =>
+      `${fileName} could not be attached: ${reason}`,
   },
   messageBubble: {
     system: "System",
@@ -238,6 +262,7 @@ export const enUS: VeloraMessages = {
       like: "Feedback saved",
       dislike: "Feedback saved",
     },
+    actionFailed: (actionLabel, error) => `${actionLabel} failed: ${error}`,
   },
   messageBranchNavigator: {
     ariaLabel: "Response versions",
@@ -296,6 +321,7 @@ export const enUS: VeloraMessages = {
     collapse: "Collapse code",
     download: "Download code",
     retryHighlight: "Retry highlighting",
+    highlightUnavailable: (error) => `Syntax highlighting unavailable: ${error}`,
   },
   formula: {
     copy: "Copy formula",
@@ -309,6 +335,9 @@ export const enUS: VeloraMessages = {
     copySource: "Copy diagram source",
     copied: "Copied",
     diagram: "Mermaid diagram",
+    rendering: "Rendering diagram",
+    empty: "Mermaid definition is empty.",
+    retry: "Retry",
   },
   markdownRenderer: {
     streaming: "Response is streaming",
@@ -350,6 +379,15 @@ export const zhCN: VeloraMessages = {
     retryAttachment: (fileName) => `重试 ${fileName}`,
     uploading: "上传中",
     uploadFailed: "上传失败",
+    sending: "发送中",
+    generating: "生成中",
+    stopping: "停止中",
+    notAccepted: "消息未被接受，请重试。",
+    fileTypeRejected: (fileName) => `${fileName} 的文件类型不受支持。`,
+    fileTooLarge: (fileName, limit) => `${fileName} 超过 ${limit} 的大小限制。`,
+    attachmentLimit: (limit) => `最多只能添加 ${limit} 个附件。`,
+    duplicateAttachment: (fileName) => `${fileName} 的附件标识重复。`,
+    attachmentCreationFailed: (fileName, reason) => `${fileName} 无法添加：${reason}`,
   },
   messageBubble: {
     system: "系统",
@@ -399,6 +437,7 @@ export const zhCN: VeloraMessages = {
       like: "反馈已保存",
       dislike: "反馈已保存",
     },
+    actionFailed: (actionLabel, error) => `${actionLabel}失败：${error}`,
   },
   messageBranchNavigator: {
     ariaLabel: "回复版本",
@@ -457,6 +496,7 @@ export const zhCN: VeloraMessages = {
     collapse: "收起代码",
     download: "下载代码",
     retryHighlight: "重试代码高亮",
+    highlightUnavailable: (error) => `代码高亮不可用：${error}`,
   },
   formula: {
     copy: "复制公式",
@@ -470,6 +510,9 @@ export const zhCN: VeloraMessages = {
     copySource: "复制图表源码",
     copied: "已复制",
     diagram: "Mermaid 图表",
+    rendering: "正在渲染图表",
+    empty: "Mermaid 图表定义为空。",
+    retry: "重试",
   },
   markdownRenderer: {
     streaming: "回复正在生成",

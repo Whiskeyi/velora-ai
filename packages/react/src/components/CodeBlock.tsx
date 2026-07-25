@@ -3,6 +3,7 @@ import {
   type HTMLAttributes,
   type ReactNode,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -147,7 +148,12 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
     onChange: onCollapsedChange,
   });
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lineCount = code.length === 0 ? 1 : code.split("\n").length;
+  const onHighlightErrorRef = useRef(onHighlightError);
+  onHighlightErrorRef.current = onHighlightError;
+  const lineCount = useMemo(
+    () => (code.length === 0 ? 1 : code.split("\n").length),
+    [code],
+  );
   const canCollapse = collapsible && lineCount > Math.max(1, collapseAfterLines);
 
   useEffect(() => {
@@ -171,11 +177,11 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
         if (controller.signal.aborted) return;
         setHighlightError(errorMessage(error));
         setHighlighting(false);
-        onHighlightError?.(error);
+        onHighlightErrorRef.current?.(error);
       });
 
     return () => controller.abort();
-  }, [code, highlighter, highlightAttempt, language, onHighlightError]);
+  }, [code, highlighter, highlightAttempt, language]);
 
   useEffect(
     () => () => {
@@ -224,6 +230,7 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
       data-wrap={lineWrap ? "true" : "false"}
       data-collapsed={canCollapse && isCollapsed ? "true" : "false"}
       data-highlighting={highlighting ? "true" : "false"}
+      aria-busy={highlighting || undefined}
     >
       <div className="vl-code-block__toolbar">
         <div className="vl-code-block__identity">
@@ -294,7 +301,7 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
       ) : null}
       {highlightError ? (
         <span className="vl-sr-only" role="status">
-          Syntax highlighting unavailable: {highlightError}
+          {copy.highlightUnavailable(highlightError)}
         </span>
       ) : null}
     </div>

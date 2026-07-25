@@ -38,6 +38,8 @@ export const StreamingIndicator = forwardRef<HTMLSpanElement, StreamingIndicator
         ? undefined
         : Math.min(100, Math.max(0, progress));
     const determinate = normalizedProgress !== undefined;
+    const effectiveActive =
+      active && (normalizedProgress === undefined || normalizedProgress < 100);
     return (
       <span
         {...rest}
@@ -46,10 +48,10 @@ export const StreamingIndicator = forwardRef<HTMLSpanElement, StreamingIndicator
         data-size={size}
         data-variant={variant}
         data-tone={tone}
-        data-active={active ? "true" : "false"}
-        role={determinate ? "progressbar" : active ? "status" : undefined}
+        data-active={effectiveActive ? "true" : "false"}
+        role={determinate ? "progressbar" : effectiveActive ? "status" : undefined}
         aria-label={ariaLabel ?? (determinate ? resolvedLabel : undefined)}
-        aria-live={announce && active && !determinate ? "polite" : undefined}
+        aria-live={announce && effectiveActive && !determinate ? "polite" : undefined}
         aria-valuemin={determinate ? 0 : undefined}
         aria-valuemax={determinate ? 100 : undefined}
         aria-valuenow={normalizedProgress}

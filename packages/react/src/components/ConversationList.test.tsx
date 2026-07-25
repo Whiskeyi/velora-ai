@@ -123,4 +123,31 @@ describe("ConversationList deep interactions", () => {
     );
     expect(onCreate).toHaveBeenCalledOnce();
   });
+
+  it("supports immediate filtering against consumer-defined search text", async () => {
+    const view = await render(
+      <ConversationList
+        conversations={conversations}
+        searchable
+        deferFiltering={false}
+        getSearchText={(conversation) =>
+          `${conversation.title} ${String(conversation.metadata?.group ?? "")}`
+        }
+      />,
+    );
+    const search = view.querySelector<HTMLInputElement>("input[type='search']");
+    await act(async () => {
+      if (!search) return;
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )?.set;
+      setter?.call(search, "Earlier");
+      search.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    expect(view.querySelectorAll(".vl-conversation-list__button")).toHaveLength(1);
+    expect(view.textContent).toContain("Research notes");
+    expect(view.querySelector("nav")?.hasAttribute("aria-busy")).toBe(false);
+  });
 });

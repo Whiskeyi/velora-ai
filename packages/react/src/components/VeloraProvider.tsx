@@ -172,6 +172,7 @@ export const VeloraProvider = forwardRef<HTMLDivElement, VeloraProviderProps>(
           style={tokenStyle}
           data-vl-theme={theme}
           data-vl-density={density}
+          data-vl-locale={locale}
           data-vl-reduced-motion={String(reducedMotion)}
           lang={locale}
           dir={direction}

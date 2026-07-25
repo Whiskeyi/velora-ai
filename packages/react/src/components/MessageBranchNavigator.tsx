@@ -69,7 +69,7 @@ export const MessageBranchNavigator = forwardRef<HTMLDivElement, MessageBranchNa
     ref,
   ) {
     const componentClass = useComponentClass("message-branch-navigator");
-    const { messages } = useVelora();
+    const { direction, messages } = useVelora();
     const copy = messages.messageBranchNavigator;
     const resolvedAriaLabel = ariaLabel ?? copy.ariaLabel;
     const resolvedPreviousLabel = previousLabel ?? copy.previous;
@@ -101,10 +101,12 @@ export const MessageBranchNavigator = forwardRef<HTMLDivElement, MessageBranchNa
       onKeyDown?.(event);
       if (event.defaultPrevented || inactive) return;
 
-      if (event.key === "ArrowLeft") {
+      const previousKey = direction === "rtl" ? "ArrowRight" : "ArrowLeft";
+      const nextKey = direction === "rtl" ? "ArrowLeft" : "ArrowRight";
+      if (event.key === previousKey) {
         event.preventDefault();
         if (canGoPrevious) moveTo(activeIndex - 1);
-      } else if (event.key === "ArrowRight") {
+      } else if (event.key === nextKey) {
         event.preventDefault();
         if (canGoNext) moveTo(activeIndex + 1);
       } else if (event.key === "Home") {
@@ -127,6 +129,7 @@ export const MessageBranchNavigator = forwardRef<HTMLDivElement, MessageBranchNa
         aria-disabled={disabled || normalizedCount === 0 || undefined}
         data-index={activeIndex}
         data-count={normalizedCount}
+        data-direction={direction}
         tabIndex={resolvedTabIndex}
         onKeyDown={handleKeyDown}
       >

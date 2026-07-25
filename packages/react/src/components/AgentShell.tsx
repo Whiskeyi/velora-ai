@@ -129,7 +129,10 @@ export const AgentShell = forwardRef<HTMLDivElement, AgentShellProps>(function A
   const rootRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const inspectorRef = useRef<HTMLElement | null>(null);
-  const [shellWidth, setShellWidth] = useState<number | null>(null);
+  const [responsiveMode, setResponsiveMode] = useState({
+    sidebarIsDrawer: false,
+    inspectorIsDrawer: false,
+  });
   const [sidebarOpen, setSidebarOpen] = useControllableState({
     value: mobileSidebarOpen,
     defaultValue: defaultMobileSidebarOpen,
@@ -140,9 +143,7 @@ export const AgentShell = forwardRef<HTMLDivElement, AgentShellProps>(function A
     defaultValue: defaultMobileInspectorOpen,
     onChange: onMobileInspectorOpenChange,
   });
-  const sidebarIsDrawer = shellWidth != null && shellWidth <= SIDEBAR_DRAWER_MAX_WIDTH;
-  const inspectorIsDrawer =
-    shellWidth != null && shellWidth <= INSPECTOR_DRAWER_MAX_WIDTH;
+  const { sidebarIsDrawer, inspectorIsDrawer } = responsiveMode;
   const modalPanel = sidebar != null && sidebarOpen && sidebarIsDrawer
     ? "sidebar"
     : inspector != null && inspectorOpen && inspectorIsDrawer
@@ -155,12 +156,24 @@ export const AgentShell = forwardRef<HTMLDivElement, AgentShellProps>(function A
     const element = rootRef.current;
     if (!element) return;
 
-    const measure = () => setShellWidth(element.getBoundingClientRect().width);
+    const updateResponsiveMode = (width: number) => {
+      const next = {
+        sidebarIsDrawer: width <= SIDEBAR_DRAWER_MAX_WIDTH,
+        inspectorIsDrawer: width <= INSPECTOR_DRAWER_MAX_WIDTH,
+      };
+      setResponsiveMode((current) =>
+        current.sidebarIsDrawer === next.sidebarIsDrawer &&
+        current.inspectorIsDrawer === next.inspectorIsDrawer
+          ? current
+          : next,
+      );
+    };
+    const measure = () => updateResponsiveMode(element.getBoundingClientRect().width);
     measure();
     if (typeof ResizeObserver !== "undefined") {
       const observer = new ResizeObserver((entries) => {
         const width = entries[0]?.contentRect.width;
-        if (width != null) setShellWidth(width);
+        if (width != null) updateResponsiveMode(width);
       });
       observer.observe(element);
       return () => observer.disconnect();

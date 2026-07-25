@@ -44,6 +44,7 @@ describe("VeloraProvider locale", () => {
     );
     expect(container.textContent).toContain("正在生成回复");
     expect(container.firstElementChild?.getAttribute("lang")).toBe("zh-CN");
+    expect(container.firstElementChild?.getAttribute("data-vl-locale")).toBe("zh-CN");
 
     await act(async () => root.unmount());
     container.remove();

@@ -332,7 +332,7 @@ export const ToolCallCard = forwardRef<HTMLElement, ToolCallCardProps>(function 
         aria-live="polite"
       >
         {status === "running" && pendingAction == null ? (
-          <StreamingIndicator label="Tool is running" size="small" announce={false} />
+          <StreamingIndicator label={copy.running} size="small" announce={false} />
         ) : null}
         {statusContent}
       </span>

@@ -199,7 +199,7 @@ function MessageBubbleInner(
           {message.status === "streaming" ? (
             <StreamingIndicator
               className="vl-message-bubble__streaming"
-              label="Response is streaming"
+              label={copy.streaming}
               size="small"
             />
           ) : null}

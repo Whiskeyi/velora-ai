@@ -544,7 +544,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
           }
         } else {
           setSubmissionStatus("error");
-          setInternalError(result.error ?? "The message was not accepted. Try again.");
+          setInternalError(result.error ?? copy.notAccepted);
         }
       } catch (submitError) {
         const active = activeSubmissionRef.current;
@@ -645,7 +645,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
             rejections.push({
               file,
               reason: "type",
-              message: `${file.name} is not an accepted file type.`,
+              message: copy.fileTypeRejected(file.name),
             });
             return;
           }
@@ -653,7 +653,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
             rejections.push({
               file,
               reason: "size",
-              message: `${file.name} exceeds the ${formatFileSize(maxFileSize)} limit.`,
+              message: copy.fileTooLarge(file.name, formatFileSize(maxFileSize)),
             });
             return;
           }
@@ -661,7 +661,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
             rejections.push({
               file,
               reason: "limit",
-              message: `Only ${attachmentLimit} attachments are allowed.`,
+              message: copy.attachmentLimit(attachmentLimit),
             });
             return;
           }
@@ -672,7 +672,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
               rejections.push({
                 file,
                 reason: "duplicate",
-                message: `${file.name} has a duplicate attachment id.`,
+                message: copy.duplicateAttachment(file.name),
               });
               return;
             }
@@ -682,7 +682,10 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
             rejections.push({
               file,
               reason: "creation",
-              message: `${file.name} could not be attached: ${errorMessage(creationError)}`,
+              message: copy.attachmentCreationFailed(
+                file.name,
+                errorMessage(creationError),
+              ),
             });
           }
         });
@@ -706,6 +709,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
       [
         accept,
         attachmentsEnabled,
+        copy,
         commitDraft,
         createAttachment,
         disabled,
@@ -814,11 +818,11 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
     const effectiveRunStatus = stopPending ? "stopping" : runStatus;
     const activityLabel =
       submissionPending
-        ? "Sending"
+        ? copy.sending
         : effectiveRunStatus === "streaming"
-          ? "Generating"
+          ? copy.generating
           : effectiveRunStatus === "stopping"
-            ? "Stopping"
+            ? copy.stopping
             : undefined;
     const displayStatus =
       displayedError != null || submissionStatus === "error" || runStatus === "error"

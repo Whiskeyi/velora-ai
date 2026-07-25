@@ -18,6 +18,7 @@ import {
   errorMessage,
   type SemanticClassNames,
   type SemanticStyles,
+  useDocumentVisibleInterval,
   useControllableState,
 } from "./utils";
 
@@ -209,6 +210,16 @@ export const AgentSteps = forwardRef<HTMLOListElement, AgentStepsProps>(function
   const statusSignature = steps
     .map((step) => `${step.id}:${step.status}:${step.detail == null ? "0" : "1"}`)
     .join("|");
+  const hasActiveTimedStep = useMemo(
+    () =>
+      showDuration &&
+      steps.some(
+        (step) =>
+          step.startedAt !== undefined &&
+          isActiveStatus(step.status as AgentStepsStatus),
+      ),
+    [showDuration, steps],
+  );
 
   useEffect(() => {
     mountedRef.current = true;
@@ -217,23 +228,11 @@ export const AgentSteps = forwardRef<HTMLOListElement, AgentStepsProps>(function
     };
   }, []);
 
-  useEffect(() => {
-    if (
-      !showDuration ||
-      !steps.some(
-        (step) => step.startedAt !== undefined && isActiveStatus(step.status as AgentStepsStatus),
-      )
-    ) {
-      return undefined;
-    }
-
-    setNow(Date.now());
-    const interval = window.setInterval(
-      () => setNow(Date.now()),
-      Math.max(100, durationUpdateInterval),
-    );
-    return () => window.clearInterval(interval);
-  }, [durationUpdateInterval, showDuration, statusSignature, steps]);
+  useDocumentVisibleInterval(
+    () => setNow(Date.now()),
+    durationUpdateInterval,
+    hasActiveTimedStep,
+  );
 
   useEffect(() => {
     const currentIds = new Set(steps.map((step) => step.id));

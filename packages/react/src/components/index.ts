@@ -27,13 +27,14 @@ export {
   type ConversationListStatus,
   type ConversationRenderContext,
 } from "./ConversationList";
-export { Formula, type FormulaProps } from "./Formula";
+export { Formula, type FormulaAlignment, type FormulaProps } from "./Formula";
 export {
   MarkdownRenderer,
   type MarkdownRendererProps,
 } from "./MarkdownRenderer";
 export {
   MermaidDiagram,
+  type MermaidAlignment,
   type MermaidDiagramProps,
   type SafeMermaidConfig,
 } from "./MermaidDiagram";
@@ -63,6 +64,7 @@ export {
   type MessageGroupPosition,
   type MessageListLiveActivityContext,
   type MessageListLiveActivityKind,
+  type MessageListEmptyPlacement,
   type MessageListProps,
   type MessageListRenderContext,
 } from "./MessageList";
