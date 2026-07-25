@@ -11,7 +11,7 @@ import {
 } from "react";
 import type { AgentStep, AgentStepStatus } from "../runtime";
 import { StreamingIndicator } from "./StreamingIndicator";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import {
   composeStyles,
   cx,
@@ -79,15 +79,6 @@ export interface AgentStepsProps extends Omit<HTMLAttributes<HTMLOListElement>, 
   styles?: SemanticStyles<AgentStepsSlot>;
 }
 
-const defaultStatusLabels: Record<AgentStepsStatus, ReactNode> = {
-  pending: "Pending",
-  running: "In progress",
-  waiting: "Waiting",
-  complete: "Complete",
-  error: "Failed",
-  cancelled: "Cancelled",
-};
-
 function defaultFormatDuration(durationMs: number): string {
   const safeDuration = Math.max(0, durationMs);
   if (safeDuration < 1_000) return `${Math.round(safeDuration)}ms`;
@@ -110,10 +101,12 @@ function shouldAutoExpand(status: AgentStepsStatus, policy: AgentStepsAutoExpand
 
 function StepStatusIcon({
   status,
+  runningLabel,
   className,
   style,
 }: {
   status: AgentStepsStatus;
+  runningLabel: string;
   className?: string;
   style?: CSSProperties;
 }) {
@@ -124,7 +117,7 @@ function StepStatusIcon({
         style={style}
         data-slot="statusIcon"
       >
-        <StreamingIndicator label="In progress" size="small" announce={false} />
+        <StreamingIndicator label={runningLabel} size="small" announce={false} />
       </span>
     );
   }
@@ -174,9 +167,9 @@ export const AgentSteps = forwardRef<HTMLOListElement, AgentStepsProps>(function
     formatDuration = defaultFormatDuration,
     onRetry,
     onRetryError,
-    retryLabel = "Retry",
-    retryingLabel = "Retrying…",
-    empty = "No steps",
+    retryLabel,
+    retryingLabel,
+    empty,
     className,
     style,
     classNames,
@@ -186,6 +179,11 @@ export const AgentSteps = forwardRef<HTMLOListElement, AgentStepsProps>(function
   ref,
 ) {
   const componentClass = useComponentClass("agent-steps");
+  const { messages } = useVelora();
+  const copy = messages.agentSteps;
+  const resolvedRetryLabel = retryLabel ?? copy.retry;
+  const resolvedRetryingLabel = retryingLabel ?? copy.retrying;
+  const resolvedEmpty = empty ?? copy.empty;
   const generatedId = useId().replace(/:/g, "");
   const [expanded, setExpanded] = useControllableState<readonly string[]>({
     value: expandedStepIds,
@@ -199,7 +197,15 @@ export const AgentSteps = forwardRef<HTMLOListElement, AgentStepsProps>(function
   const manualStatusRef = useRef(new Map<string, AgentStepsStatus>());
   const previousStatusRef = useRef(new Map<string, AgentStepsStatus>());
   const mountedRef = useRef(true);
-  const labels = { ...defaultStatusLabels, ...statusLabels };
+  const labels: Record<AgentStepsStatus, ReactNode> = {
+    pending: copy.pending,
+    waiting: copy.waiting,
+    running: copy.running,
+    complete: copy.complete,
+    error: copy.error,
+    cancelled: copy.cancelled,
+    ...statusLabels,
+  };
   const statusSignature = steps
     .map((step) => `${step.id}:${step.status}:${step.detail == null ? "0" : "1"}`)
     .join("|");
@@ -333,7 +339,7 @@ export const AgentSteps = forwardRef<HTMLOListElement, AgentStepsProps>(function
           style={styles?.empty}
           data-slot="empty"
         >
-          {empty}
+          {resolvedEmpty}
         </li>
       </ol>
     );
@@ -445,6 +451,7 @@ export const AgentSteps = forwardRef<HTMLOListElement, AgentStepsProps>(function
             >
               <StepStatusIcon
                 status={status}
+                runningLabel={copy.running}
                 className={classNames?.statusIcon}
                 style={styles?.statusIcon}
               />
@@ -498,10 +505,14 @@ export const AgentSteps = forwardRef<HTMLOListElement, AgentStepsProps>(function
                         data-slot="retry"
                         type="button"
                         disabled={retrying}
-                        aria-label={`${typeof retryLabel === "string" ? retryLabel : "Retry"}: ${step.title}`}
+                        aria-label={`${
+                          typeof resolvedRetryLabel === "string"
+                            ? resolvedRetryLabel
+                            : copy.retry
+                        }: ${step.title}`}
                         onClick={() => void retry()}
                       >
-                        {retrying ? retryingLabel : retryLabel}
+                        {retrying ? resolvedRetryingLabel : resolvedRetryLabel}
                       </button>
                     ) : null}
                     {retryError != null ? (

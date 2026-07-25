@@ -140,27 +140,6 @@ function getPrependedCount(
   return offset;
 }
 
-function defaultLiveAnnouncement(
-  message: AgentMessage,
-  context: MessageListLiveActivityContext,
-): string {
-  const role =
-    message.role === "assistant"
-      ? "Assistant"
-      : message.role === "user"
-        ? "User"
-        : message.role === "tool"
-          ? "Tool"
-          : "System";
-
-  if (context.kind === "complete") return `${role} response complete`;
-  if (context.kind === "error") return `${role} message failed`;
-  if (context.kind === "aborted") return `${role} response stopped`;
-  return context.count > 1
-    ? `${context.count} new messages. Latest from ${role}`
-    : `${role} message added`;
-}
-
 function messageHasChanged(previous: AgentMessage, current: AgentMessage): boolean {
   return (
     previous.updatedAt !== current.updatedAt ||
@@ -178,18 +157,17 @@ function MessageListInner(
     messages,
     conversationKey,
     renderMessage,
-    empty = "Start a conversation",
+    empty,
     autoScroll = true,
     followThreshold = 72,
     reachStartThreshold = 48,
     scrollBehavior = "smooth",
     showJumpToLatest = true,
-    jumpToLatestLabel = "Jump to latest",
-    formatNewActivityLabel = (count, label) =>
-      `${label} · ${count} new ${count === 1 ? "update" : "updates"}`,
-    ariaLabel = "Conversation messages",
+    jumpToLatestLabel,
+    formatNewActivityLabel,
+    ariaLabel,
     tabIndex = 0,
-    getLiveAnnouncement = defaultLiveAnnouncement,
+    getLiveAnnouncement: getLiveAnnouncementProp,
     className,
     onScroll,
     onFollowChange,
@@ -201,7 +179,31 @@ function MessageListInner(
   forwardedRef: React.ForwardedRef<HTMLDivElement>,
 ) {
   const componentClass = useComponentClass("message-list");
-  const { reducedMotion } = useVelora();
+  const { messages: localeMessages, reducedMotion } = useVelora();
+  const copy = localeMessages.messageList;
+  const resolvedEmpty = empty ?? copy.empty;
+  const resolvedJumpToLatestLabel = jumpToLatestLabel ?? copy.jumpToLatest;
+  const resolvedFormatNewActivityLabel =
+    formatNewActivityLabel ?? copy.newActivity;
+  const resolvedAriaLabel = ariaLabel ?? copy.ariaLabel;
+  const getLiveAnnouncement = useCallback(
+    (message: AgentMessage, context: MessageListLiveActivityContext) => {
+      if (getLiveAnnouncementProp) return getLiveAnnouncementProp(message, context);
+      const role =
+        message.role === "assistant"
+          ? copy.roleAssistant
+          : message.role === "user"
+            ? copy.roleUser
+            : message.role === "tool"
+              ? copy.roleTool
+              : copy.roleSystem;
+      if (context.kind === "complete") return copy.responseComplete(role);
+      if (context.kind === "error") return copy.messageFailed(role);
+      if (context.kind === "aborted") return copy.responseStopped(role);
+      return copy.messageAdded(role, context.count);
+    },
+    [copy, getLiveAnnouncementProp],
+  );
   const systemReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const rootRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -534,10 +536,8 @@ function MessageListInner(
 
   const jumpButtonLabel =
     newActivityCount > 0
-      ? `${jumpToLatestLabel}, ${newActivityCount} new ${
-          newActivityCount === 1 ? "update" : "updates"
-        }`
-      : jumpToLatestLabel;
+      ? copy.newActivity(newActivityCount, resolvedJumpToLatestLabel)
+      : resolvedJumpToLatestLabel;
 
   return (
     <div
@@ -546,7 +546,7 @@ function MessageListInner(
       className={cx(componentClass, className)}
       onScroll={handleScroll}
       role="log"
-      aria-label={ariaLabel}
+      aria-label={resolvedAriaLabel}
       aria-live="off"
       tabIndex={tabIndex}
       data-following={following ? "true" : "false"}
@@ -554,7 +554,7 @@ function MessageListInner(
     >
       <div ref={contentRef} className="vl-message-list__content">
         {messages.length === 0 ? (
-          <div className="vl-message-list__empty">{empty}</div>
+          <div className="vl-message-list__empty">{resolvedEmpty}</div>
         ) : (
           messages.map((message, index) => (
             <MessageListRow
@@ -596,8 +596,11 @@ function MessageListInner(
           </svg>
           <span>
             {newActivityCount > 0
-              ? formatNewActivityLabel(newActivityCount, jumpToLatestLabel)
-              : jumpToLatestLabel}
+              ? resolvedFormatNewActivityLabel(
+                  newActivityCount,
+                  resolvedJumpToLatestLabel,
+                )
+              : resolvedJumpToLatestLabel}
           </span>
         </button>
       ) : null}

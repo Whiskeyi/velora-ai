@@ -17,7 +17,7 @@ import {
   useState,
 } from "react";
 import { StreamingIndicator } from "./StreamingIndicator";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import {
   composeStyles,
   cx,
@@ -277,7 +277,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
       onStopError,
       runStatus = "idle",
       submitShortcut = "enter",
-      placeholder = "Ask anything…",
+      placeholder,
       label,
       description,
       error,
@@ -304,11 +304,11 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
       attachmentIcon,
       submitIcon,
       stopIcon,
-      attachmentLabel = "Attach files",
-      submitLabel = "Send message",
-      stopLabel = "Stop generating",
-      removeAttachmentLabel = (attachment) => `Remove ${attachment.file.name}`,
-      retryAttachmentLabel = (attachment) => `Retry ${attachment.file.name}`,
+      attachmentLabel,
+      submitLabel,
+      stopLabel,
+      removeAttachmentLabel,
+      retryAttachmentLabel,
       textareaRef,
       inputProps,
       className,
@@ -324,6 +324,18 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
     ref,
   ) {
     const componentClass = useComponentClass("prompt-composer");
+    const { messages } = useVelora();
+    const copy = messages.promptComposer;
+    const resolvedPlaceholder = placeholder ?? copy.placeholder;
+    const resolvedAttachmentLabel = attachmentLabel ?? copy.attachmentLabel;
+    const resolvedSubmitLabel = submitLabel ?? copy.submitLabel;
+    const resolvedStopLabel = stopLabel ?? copy.stopLabel;
+    const resolvedRemoveAttachmentLabel =
+      removeAttachmentLabel ?? ((attachment: PromptAttachment) =>
+        copy.removeAttachment(attachment.file.name));
+    const resolvedRetryAttachmentLabel =
+      retryAttachmentLabel ?? ((attachment: PromptAttachment) =>
+        copy.retryAttachment(attachment.file.name));
     const generatedId = useId();
     const inputId = inputProps?.id ?? `${generatedId}-input`;
     const fileInputId = `${generatedId}-files`;
@@ -952,9 +964,9 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
                         data-slot="attachmentMeta"
                       >
                         {attachment.status === "uploading"
-                          ? "Uploading"
+                          ? copy.uploading
                           : attachment.status === "error"
-                            ? attachment.error ?? "Upload failed"
+                            ? attachment.error ?? copy.uploadFailed
                             : formatFileSize(attachment.file.size)}
                       </span>
                       {attachment.status === "error" && retry ? (
@@ -967,7 +979,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
                           style={styles?.attachmentRetry}
                           onClick={retry}
                           disabled={disabled || retrying}
-                          aria-label={retryAttachmentLabel(attachment)}
+                          aria-label={resolvedRetryAttachmentLabel(attachment)}
                           data-slot="attachmentRetry"
                         >
                           {retrying ? "Retrying" : "Retry"}
@@ -982,7 +994,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
                         style={styles?.attachmentRemove}
                         onClick={() => removeAttachment(attachment)}
                         disabled={disabled}
-                        aria-label={removeAttachmentLabel(attachment)}
+                        aria-label={resolvedRemoveAttachmentLabel(attachment)}
                         data-slot="attachmentRemove"
                       >
                         ×
@@ -1024,7 +1036,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
             )}
             style={inputStyle}
             value={currentDraft.text}
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             disabled={disabled}
             maxLength={normalizedMaxLength}
             rows={normalizedMinRows}
@@ -1033,7 +1045,9 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
             onPaste={handlePaste}
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
-            aria-label={inputProps?.["aria-label"] ?? (label == null ? placeholder : undefined)}
+            aria-label={
+              inputProps?.["aria-label"] ?? (label == null ? resolvedPlaceholder : undefined)
+            }
             aria-describedby={describedBy}
             aria-errormessage={displayedError != null ? errorId : undefined}
             aria-invalid={displayedError != null || inputProps?.["aria-invalid"] || undefined}
@@ -1086,7 +1100,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
                     }
                   }}
                   disabled={disabled || currentDraft.attachments.length >= attachmentLimit}
-                  aria-label={attachmentLabel}
+                  aria-label={resolvedAttachmentLabel}
                   data-action="attach"
                   data-slot="attachButton"
                 >
@@ -1104,7 +1118,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
                 type="button"
                 onClick={() => void handleStop()}
                 disabled={disabled || stopPending || runStatus === "stopping"}
-                aria-label={stopLabel}
+                aria-label={resolvedStopLabel}
                 data-action="stop"
                 data-slot="submitButton"
               >
@@ -1119,7 +1133,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
                 style={styles?.submitButton}
                 type="submit"
                 disabled={!canSubmit}
-                aria-label={submitLabel}
+                aria-label={resolvedSubmitLabel}
                 data-action="submit"
                 data-slot="submitButton"
               >

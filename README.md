@@ -10,9 +10,9 @@ Velora is a component library rather than a fixed chat template. It separates a 
 
 The repository contains the publishable `@velora-ai/react` package and a live-editable component workbench.
 
-[Explore the live component workbench](https://whiskeyi.github.io/velora-ai/) · [Read the package API guide](packages/react/README.md)
+[Explore the live component workbench](https://ai.components.zhuchj.com/) · [Read the package API guide](packages/react/README.md)
 
-The documentation site now separates the live component workbench from a component API reference. Use the workbench to edit and re-render examples, then use the API section to inspect props, defaults, interaction contracts, and integration notes by component category.
+The documentation site now separates the live component workbench from a component API reference. The home page keeps a compact component index, while every primitive has an addressable `/components/<component>/` detail page with a live editor, API table, interaction contract, and responsive navigation.
 
 ## 中文使用入口
 
@@ -20,7 +20,7 @@ Velora 不是一个固定聊天模板，而是一套可组合的 AI 交互组件
 
 最常见的组合方式是：
 
-- `VeloraProvider` 负责主题 token、密度、动效和语义 class。
+- `VeloraProvider` 负责主题 token、密度、动效、语义 class，以及全局 `en-US` / `zh-CN` 组件文案。
 - `ConversationList` + `usePromptDrafts` 负责会话切换与草稿隔离。
 - `MessageList` + `MessageBubble` + `MarkdownRenderer` 负责流式消息、富文本和阅读位置。
 - `PromptComposer` 负责多模态草稿、附件、预检、发送接受态和停止。
@@ -228,6 +228,9 @@ npm run verify:package
 npm run verify:showcase
 vp build
 npm run verify:site-css
+npm run build:pages
+npm run verify:bundle
+npm run test:e2e
 ```
 
 ## Repository layout

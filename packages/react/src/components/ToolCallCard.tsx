@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { StreamingIndicator } from "./StreamingIndicator";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import {
   composeStyles,
   cx,
@@ -92,22 +92,6 @@ export interface ToolCallCardProps extends Omit<HTMLAttributes<HTMLElement>, "ch
   styles?: SemanticStyles<ToolCallCardSlot>;
 }
 
-const defaultStatusLabels: Record<ToolCallStatus, ReactNode> = {
-  draft: "Draft",
-  "approval-required": "Approval required",
-  running: "Running",
-  complete: "Complete",
-  error: "Failed",
-  cancelled: "Cancelled",
-};
-
-const defaultRiskLabels: Record<ToolCallRisk, ReactNode> = {
-  low: "Low risk",
-  medium: "Medium risk",
-  high: "High risk",
-  critical: "Critical risk",
-};
-
 function serializeValue(value: unknown): string {
   if (typeof value === "string") return value;
   if (value instanceof Error) return value.message;
@@ -154,15 +138,15 @@ export const ToolCallCard = forwardRef<HTMLElement, ToolCallCardProps>(function 
     renderValue,
     statusLabels,
     riskLabels,
-    argumentsLabel = "Arguments",
-    resultLabel = "Result",
-    errorLabel = "Error",
-    approveLabel = "Approve",
-    approvingLabel = "Approving…",
-    rejectLabel = "Reject",
-    rejectingLabel = "Rejecting…",
-    retryLabel = "Retry",
-    retryingLabel = "Retrying…",
+    argumentsLabel,
+    resultLabel,
+    errorLabel,
+    approveLabel,
+    approvingLabel,
+    rejectLabel,
+    rejectingLabel,
+    retryLabel,
+    retryingLabel,
     className,
     style,
     classNames,
@@ -172,6 +156,17 @@ export const ToolCallCard = forwardRef<HTMLElement, ToolCallCardProps>(function 
   ref,
 ) {
   const componentClass = useComponentClass("tool-call-card");
+  const { messages } = useVelora();
+  const copy = messages.toolCallCard;
+  const resolvedArgumentsLabel = argumentsLabel ?? copy.arguments;
+  const resolvedResultLabel = resultLabel ?? copy.result;
+  const resolvedErrorLabel = errorLabel ?? copy.errorLabel;
+  const resolvedApproveLabel = approveLabel ?? copy.approve;
+  const resolvedApprovingLabel = approvingLabel ?? copy.approving;
+  const resolvedRejectLabel = rejectLabel ?? copy.reject;
+  const resolvedRejectingLabel = rejectingLabel ?? copy.rejecting;
+  const resolvedRetryLabel = retryLabel ?? copy.retry;
+  const resolvedRetryingLabel = retryingLabel ?? copy.retrying;
   const generatedId = useId().replace(/:/g, "");
   const contentId = `vl-tool-call-${generatedId}`;
   const nameId = `${contentId}-name`;
@@ -192,8 +187,22 @@ export const ToolCallCard = forwardRef<HTMLElement, ToolCallCardProps>(function 
   const mountedRef = useRef(true);
   const manualExpansionRef = useRef(false);
   const previousStatusRef = useRef(status);
-  const resolvedStatusLabels = { ...defaultStatusLabels, ...statusLabels };
-  const resolvedRiskLabels = { ...defaultRiskLabels, ...riskLabels };
+  const resolvedStatusLabels: Record<ToolCallStatus, ReactNode> = {
+    draft: copy.draft,
+    "approval-required": copy.approvalRequired,
+    running: copy.running,
+    complete: copy.complete,
+    error: copy.error,
+    cancelled: copy.cancelled,
+    ...statusLabels,
+  };
+  const resolvedRiskLabels: Record<ToolCallRisk, ReactNode> = {
+    low: copy.lowRisk,
+    medium: copy.mediumRisk,
+    high: copy.highRisk,
+    critical: copy.criticalRisk,
+    ...riskLabels,
+  };
   const open = !collapsible || isExpanded;
   const hasDetails =
     toolArguments !== undefined ||
@@ -281,11 +290,11 @@ export const ToolCallCard = forwardRef<HTMLElement, ToolCallCardProps>(function 
 
   const statusContent =
     pendingAction === "approve"
-      ? approvingLabel
+      ? resolvedApprovingLabel
       : pendingAction === "reject"
-        ? rejectingLabel
+        ? resolvedRejectingLabel
         : pendingAction === "retry"
-          ? retryingLabel
+          ? resolvedRetryingLabel
           : resolvedStatusLabels[status];
 
   const headerContent = (
@@ -397,15 +406,15 @@ export const ToolCallCard = forwardRef<HTMLElement, ToolCallCardProps>(function 
           data-slot="body"
           data-open={open ? "true" : "false"}
           role="region"
-          aria-label={`${toolName} details`}
+          aria-label={copy.details(toolName)}
           inert={!open ? true : undefined}
           aria-hidden={!open ? true : undefined}
         >
           {toolArguments !== undefined
-            ? renderSection(argumentsLabel, toolArguments, "arguments")
+            ? renderSection(resolvedArgumentsLabel, toolArguments, "arguments")
             : null}
-          {result !== undefined ? renderSection(resultLabel, result, "result") : null}
-          {error != null ? renderSection(errorLabel, error, "error") : null}
+          {result !== undefined ? renderSection(resolvedResultLabel, result, "result") : null}
+          {error != null ? renderSection(resolvedErrorLabel, error, "error") : null}
 
           {status === "approval-required" && (onApprove || onReject) ? (
             <div
@@ -413,7 +422,7 @@ export const ToolCallCard = forwardRef<HTMLElement, ToolCallCardProps>(function 
               style={styles?.actions}
               data-slot="actions"
               role="group"
-              aria-label={`${toolName} approval actions`}
+              aria-label={copy.approvalActions(toolName)}
             >
               {onReject ? (
                 <button
@@ -422,10 +431,16 @@ export const ToolCallCard = forwardRef<HTMLElement, ToolCallCardProps>(function 
                   data-slot="reject"
                   type="button"
                   disabled={disabled || pendingAction != null}
-                  aria-label={actionAccessibleLabel(rejectLabel, "Reject", toolName)}
+                  aria-label={actionAccessibleLabel(
+                    resolvedRejectLabel,
+                    copy.reject,
+                    toolName,
+                  )}
                   onClick={() => void runAction("reject", onReject)}
                 >
-                  {pendingAction === "reject" ? rejectingLabel : rejectLabel}
+                  {pendingAction === "reject"
+                    ? resolvedRejectingLabel
+                    : resolvedRejectLabel}
                 </button>
               ) : null}
               {onApprove ? (
@@ -435,10 +450,16 @@ export const ToolCallCard = forwardRef<HTMLElement, ToolCallCardProps>(function 
                   data-slot="approve"
                   type="button"
                   disabled={disabled || pendingAction != null}
-                  aria-label={actionAccessibleLabel(approveLabel, "Approve", toolName)}
+                  aria-label={actionAccessibleLabel(
+                    resolvedApproveLabel,
+                    copy.approve,
+                    toolName,
+                  )}
                   onClick={() => void runAction("approve", onApprove)}
                 >
-                  {pendingAction === "approve" ? approvingLabel : approveLabel}
+                  {pendingAction === "approve"
+                    ? resolvedApprovingLabel
+                    : resolvedApproveLabel}
                 </button>
               ) : null}
             </div>
@@ -456,10 +477,14 @@ export const ToolCallCard = forwardRef<HTMLElement, ToolCallCardProps>(function 
                 data-slot="retry"
                 type="button"
                 disabled={disabled || pendingAction != null}
-                aria-label={actionAccessibleLabel(retryLabel, "Retry", toolName)}
+                aria-label={actionAccessibleLabel(
+                  resolvedRetryLabel,
+                  copy.retry,
+                  toolName,
+                )}
                 onClick={() => void runAction("retry", onRetry)}
               >
-                {pendingAction === "retry" ? retryingLabel : retryLabel}
+                {pendingAction === "retry" ? resolvedRetryingLabel : resolvedRetryLabel}
               </button>
             </div>
           ) : null}

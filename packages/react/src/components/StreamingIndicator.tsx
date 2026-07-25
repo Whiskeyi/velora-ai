@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from "react";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import { cx } from "./utils";
 
 export interface StreamingIndicatorProps extends HTMLAttributes<HTMLSpanElement> {
@@ -16,7 +16,7 @@ export interface StreamingIndicatorProps extends HTMLAttributes<HTMLSpanElement>
 export const StreamingIndicator = forwardRef<HTMLSpanElement, StreamingIndicatorProps>(
   function StreamingIndicator(
     {
-      label = "Generating response",
+      label,
       size = "medium",
       visibleLabel = false,
       variant = "dots",
@@ -31,6 +31,8 @@ export const StreamingIndicator = forwardRef<HTMLSpanElement, StreamingIndicator
     ref,
   ) {
     const componentClass = useComponentClass("streaming-indicator");
+    const { messages } = useVelora();
+    const resolvedLabel = label ?? messages.streamingIndicator.generating;
     const normalizedProgress =
       progress === undefined || !Number.isFinite(progress)
         ? undefined
@@ -46,7 +48,7 @@ export const StreamingIndicator = forwardRef<HTMLSpanElement, StreamingIndicator
         data-tone={tone}
         data-active={active ? "true" : "false"}
         role={determinate ? "progressbar" : active ? "status" : undefined}
-        aria-label={ariaLabel ?? (determinate ? label : undefined)}
+        aria-label={ariaLabel ?? (determinate ? resolvedLabel : undefined)}
         aria-live={announce && active && !determinate ? "polite" : undefined}
         aria-valuemin={determinate ? 0 : undefined}
         aria-valuemax={determinate ? 100 : undefined}
@@ -58,7 +60,8 @@ export const StreamingIndicator = forwardRef<HTMLSpanElement, StreamingIndicator
           <span />
         </span>
         <span className={visibleLabel ? "vl-streaming-indicator__label" : "vl-sr-only"}>
-          {label}{normalizedProgress === undefined ? "" : ` · ${Math.round(normalizedProgress)}%`}
+          {resolvedLabel}
+          {normalizedProgress === undefined ? "" : ` · ${Math.round(normalizedProgress)}%`}
         </span>
       </span>
     );

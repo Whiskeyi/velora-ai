@@ -30,7 +30,8 @@ jobs:
           cache: true
           run-install: false
       - run: vp install --frozen-lockfile
-      - run: vp build --config vite.pages.config.ts
+      - run: npm run build:pages
+      - run: npm run verify:bundle
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

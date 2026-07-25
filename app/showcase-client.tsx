@@ -35,6 +35,7 @@ import {
   Code2,
   Command,
   Copy,
+  Github,
   Globe2,
   Layers3,
   Menu,
@@ -42,6 +43,7 @@ import {
   PanelLeft,
   Play,
   Radio,
+  RotateCcw,
   Smartphone,
   Sparkles,
   Tablet,
@@ -55,6 +57,7 @@ import {
   Suspense,
   lazy,
   memo,
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -75,7 +78,7 @@ const LivePreview = lazy(() =>
   import("react-live").then((module) => ({ default: module.LivePreview })),
 );
 
-type SampleKey =
+export type SampleKey =
   | "agent-shell"
   | "velora-provider"
   | "conversation-list"
@@ -120,6 +123,7 @@ type ComponentApiProp = {
   type: string;
   defaultValue: string;
   required?: boolean;
+  description?: Localized<string>;
 };
 
 type ComponentApiSpec = {
@@ -208,6 +212,21 @@ const siteCopy = {
       composing: "Composing interface plan",
       untitled: "Untitled session",
       startDirection: "Start a new direction",
+      reasoning:
+        "Inspecting the interaction goal. Balancing disclosure, continuity, and motion. Preparing the smallest complete interface plan.",
+      responseLead: "I mapped the request into a focused agent surface.",
+      responseTitle: "Recommended direction",
+      responsePoints: [
+        "Keep one calm primary action.",
+        "Reveal tool progress only when it builds trust.",
+        "Preserve reading position while tokens arrive.",
+      ],
+      responseNote:
+        "This demo uses Velora’s deterministic mock transport. Swap it for the SSE adapter without changing the component tree.",
+      stepIntent: "Understand intent",
+      stepIntentDescription: "Mapped the request to interaction primitives",
+      stepCompose: "Compose response",
+      stepComposeDescription: "Streamed the response through the typed runtime",
     },
     trust: ["React 19", "TypeScript first", "SSE + streams", "VoidZero toolchain", "Composable by design"],
     workbench: {
@@ -221,6 +240,8 @@ const siteCopy = {
       appFile: "App.tsx",
       copy: "Copy",
       copied: "Copied",
+      reset: "Reset",
+      resetCode: "Reset example code",
       stable: "Usage guide",
       loadingEditor: "Loading interactive editor",
       loadsInView: "Interactive editor loads as this section enters view.",
@@ -399,6 +420,20 @@ const siteCopy = {
       composing: "正在组织界面方案",
       untitled: "未命名会话",
       startDirection: "开始新的方向",
+      reasoning: "正在分析交互目标，平衡信息披露、操作连续性与动效，并整理最小完整界面方案。",
+      responseLead: "我已将这次请求整理为一套聚焦的智能体界面方案。",
+      responseTitle: "建议方向",
+      responsePoints: [
+        "保留一个安静、明确的主操作。",
+        "只在有助于建立信任时展示工具进度。",
+        "流式内容到达时保持用户当前阅读位置。",
+      ],
+      responseNote:
+        "此演示使用 Velora 的确定性模拟传输；替换为 SSE 适配器时无需改动组件树。",
+      stepIntent: "理解意图",
+      stepIntentDescription: "将请求映射为可组合的交互原语",
+      stepCompose: "组织回复",
+      stepComposeDescription: "通过类型化运行时完成流式输出",
     },
     trust: ["React 19", "TypeScript 优先", "SSE + 流式", "VoidZero 工具链", "组合式设计"],
     workbench: {
@@ -412,6 +447,8 @@ const siteCopy = {
       appFile: "App.tsx",
       copy: "复制",
       copied: "已复制",
+      reset: "重置",
+      resetCode: "重置示例代码",
       stable: "用法指南",
       loadingEditor: "正在加载交互编辑器",
       loadsInView: "进入该区域后加载交互编辑器。",
@@ -1405,6 +1442,24 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
       { name: "theme", type: '"light" | "dark" | "system"', defaultValue: '"system"' },
       { name: "density", type: '"compact" | "comfortable"', defaultValue: '"comfortable"' },
       { name: "tokens", type: "Partial<VeloraTokens>", defaultValue: "undefined" },
+      {
+        name: "locale",
+        type: '"en-US" | "zh-CN" | "en" | "zh"',
+        defaultValue: '"en-US"',
+        description: {
+          en: "Sets the built-in visible labels, announcements, and accessible names for every descendant component.",
+          zh: "统一设置所有子组件的可见文案、状态播报和无障碍名称。",
+        },
+      },
+      {
+        name: "messages",
+        type: "VeloraMessagesOverride",
+        defaultValue: "undefined",
+        description: {
+          en: "Partially overrides locale messages without replacing the full message catalog.",
+          zh: "按需覆盖局部国际化文案，无需提供完整消息表。",
+        },
+      },
       { name: "reducedMotion", type: 'boolean | "system"', defaultValue: '"system"' },
       { name: "prefixCls", type: "string", defaultValue: '"vl"' },
     ],
@@ -1624,7 +1679,7 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
   },
 };
 
-function getPropDescription(doc: ComponentDoc, propName: string): string {
+function getPropDescription(doc: ComponentDoc, propName: string, locale: Locale): string {
   const normalizedName = propName.toLowerCase();
   const aliases = propName
     .split(/[/,]/)
@@ -1646,7 +1701,11 @@ function getPropDescription(doc: ComponentDoc, propName: string): string {
         normalizedName.includes(normalizedDocName),
     );
   });
-  if (!match) return doc.props[0] ?? doc.summary;
+  if (!match) {
+    return locale === "zh"
+      ? `配置 ${propName}。类型、默认值与是否必填以本行定义为准。`
+      : `Configures ${propName}. The type, default, and required state are defined in this row.`;
+  }
   const [, ...description] = match.split(":");
   return description.join(":").trim() || match;
 }
@@ -1794,11 +1853,47 @@ const seededDemoMessages: readonly AgentMessage[] = [
   ...architectureMessages,
 ];
 
-const demoSteps = [
-  { id: "intent", title: "Understand intent", status: "complete" as const },
-  { id: "patterns", title: "Compare patterns", status: "complete" as const },
-  { id: "compose", title: "Compose response", status: "running" as const },
-];
+const demoMessageContent: Record<Locale, Record<string, string>> = {
+  en: {},
+  zh: {
+    "user-demo": "为我们的 AI 工作区设计一套更平静的引导流程。",
+    "assistant-demo":
+      "界面已经就绪。每个 token、工具调用和思考状态都能渐进渲染，不阻塞主线程。",
+    "research-user": "综合已连接资料中最有价值的设计模式。",
+    "research-assistant":
+      "最清晰的模式是渐进式披露：按需呈现深度，同时保留当前任务上下文。",
+    "architecture-user": "梳理从传输层事件到消息渲染的完整链路。",
+    "architecture-assistant":
+      "SSE 事件进入传输层后会被归一化到外部状态仓库，并且只更新订阅了变化数据的消息行。",
+  },
+};
+
+function localizeDemoMessages(
+  messages: readonly AgentMessage[],
+  locale: Locale,
+): readonly AgentMessage[] {
+  const content = demoMessageContent[locale];
+  if (locale === "en") return messages;
+  return messages.map((message) => {
+    const localized = content[message.id];
+    return localized ? { ...message, content: localized } : message;
+  });
+}
+
+function getDemoSteps(locale: Locale) {
+  if (locale === "zh") {
+    return [
+      { id: "intent", title: "理解意图", status: "complete" as const },
+      { id: "patterns", title: "比较方案", status: "complete" as const },
+      { id: "compose", title: "组织回复", status: "running" as const },
+    ];
+  }
+  return [
+    { id: "intent", title: "Understand intent", status: "complete" as const },
+    { id: "patterns", title: "Compare patterns", status: "complete" as const },
+    { id: "compose", title: "Compose response", status: "running" as const },
+  ];
+}
 
 const samples: Sample[] = [
   {
@@ -2930,6 +3025,28 @@ render(<Demo />);`,
   },
 ];
 
+export const COMPONENT_KEYS = samples.map((sample) => sample.key);
+
+function getSiteBasePath(): string {
+  if (typeof window === "undefined") return "";
+  return window.location.pathname === "/velora-ai" ||
+    window.location.pathname.startsWith("/velora-ai/")
+    ? "/velora-ai"
+    : "";
+}
+
+function getHomeHref(fragment = ""): string {
+  return `${getSiteBasePath()}/${fragment}`;
+}
+
+function getComponentHref(key: SampleKey): string {
+  return `${getSiteBasePath()}/components/${key}/`;
+}
+
+export function isSampleKey(value: string): value is SampleKey {
+  return COMPONENT_KEYS.includes(value as SampleKey);
+}
+
 function BrandMark() {
   return (
     <span className="brand-mark" aria-hidden="true">
@@ -2940,7 +3057,7 @@ function BrandMark() {
   );
 }
 
-function createDemoTransport() {
+function createDemoTransport(locale: Locale) {
   const isStaticDemo =
     typeof document !== "undefined" &&
     document.documentElement.dataset.veloraDemoTransport === "mock";
@@ -2949,6 +3066,7 @@ function createDemoTransport() {
     return createSSETransport({ url: "/api/demo/stream" });
   }
 
+  const copy = siteCopy[locale].agent;
   return createMockTransport({
     initialDelayMs: 120,
     chunkSize: [2, 4, 3, 5],
@@ -2966,30 +3084,29 @@ function createDemoTransport() {
 
       return {
         content: [
-          `I mapped “${subject}” into a focused agent surface.`,
-          "\n\n**Recommended direction**\n\n",
-          "1. Keep one calm primary action.\n",
-          "2. Reveal tool progress only when it builds trust.\n",
-          "3. Preserve reading position while tokens arrive.\n\n",
+          locale === "zh" ? `${copy.responseLead}\n\n> ${subject}` : `${copy.responseLead}\n\n> ${subject}`,
+          `\n\n**${copy.responseTitle}**\n\n`,
+          `1. ${copy.responsePoints[0]}\n`,
+          `2. ${copy.responsePoints[1]}\n`,
+          `3. ${copy.responsePoints[2]}\n\n`,
           "```tsx\n<AgentShell composer={<PromptComposer onSubmit={send} />} />\n```\n\n",
-          "This GitHub Pages demo uses Velora’s deterministic mock transport. Swap it for the SSE adapter without changing the component tree.",
+          copy.responseNote,
         ].join(""),
-        reasoning:
-          "Inspecting the interaction goal. Balancing disclosure, continuity, and motion. Preparing the smallest complete interface plan.",
+        reasoning: copy.reasoning,
         steps: [
           {
             id: "intent",
-            title: "Understand intent",
+            title: copy.stepIntent,
             status: "complete",
-            description: "Mapped the request to interaction primitives",
+            description: copy.stepIntentDescription,
             startedAt: completedAt - 420,
             completedAt: completedAt - 180,
           },
           {
             id: "compose",
-            title: "Compose response",
+            title: copy.stepCompose,
             status: "complete",
-            description: "Streamed the response through the typed runtime",
+            description: copy.stepComposeDescription,
             startedAt: completedAt - 170,
             completedAt,
           },
@@ -3000,8 +3117,8 @@ function createDemoTransport() {
   });
 }
 
-function useDemoAgent(conversationId: string) {
-  const transport = useMemo(createDemoTransport, []);
+function useDemoAgent(conversationId: string, locale: Locale) {
+  const transport = useMemo(() => createDemoTransport(locale), [locale]);
   const storeRef = useRef<ReturnType<typeof createAgentStore> | null>(null);
   if (!storeRef.current) {
     storeRef.current = createAgentStore({
@@ -3018,8 +3135,8 @@ const HeroAgent = memo(function HeroAgent({ locale }: { locale: Locale }) {
   const [conversations, setConversations] = useState(() => [...demoConversations]);
   const [activeConversation, setActiveConversation] = useState("launch");
   const [model, setModel] = useState("velora-pro");
-  const [tool, setTool] = useState("workspace");
-  const [toolStatus, setToolStatus] = useState<ToolCallStatus>("approval-required");
+  const [tool, setTool] = useState("none");
+  const [toolStatus, setToolStatus] = useState<ToolCallStatus>("draft");
   const [toolExpanded, setToolExpanded] = useState(false);
   const [toolResult, setToolResult] = useState<Record<string, unknown> | undefined>();
   const [composerNotice, setComposerNotice] = useState(t.initialNotice);
@@ -3028,25 +3145,30 @@ const HeroAgent = memo(function HeroAgent({ locale }: { locale: Locale }) {
   >({});
   const drafts = usePromptDrafts();
   const draftCounter = useRef(0);
-  const chat = useDemoAgent(activeConversation);
+  const chat = useDemoAgent(activeConversation, locale);
   const renderedConversations = useMemo(
     () => localizeConversations(conversations, locale),
     [conversations, locale],
   );
-  const visibleMessages = chat.messages;
+  const visibleMessages = useMemo(
+    () => localizeDemoMessages(chat.messages, locale),
+    [chat.messages, locale],
+  );
   const latestAssistant = [...visibleMessages]
     .reverse()
     .find((message) => message.role === "assistant");
   const visibleSteps = latestAssistant?.steps?.length
     ? latestAssistant.steps
     : visibleMessages.length
-      ? demoSteps
+      ? getDemoSteps(locale)
       : [];
   const visibleReasoning =
     latestAssistant?.reasoning ||
     (visibleMessages.length
-      ? "The response prioritizes legibility, continuity, and reversible actions before visual novelty."
-      : "Reasoning will appear after the first response begins.");
+      ? t.reasoning
+      : locale === "zh"
+        ? "首次回复开始后会在这里展示思考过程。"
+        : "Reasoning will appear after the first response begins.");
   const activeTitle =
     renderedConversations.find((conversation) => conversation.id === activeConversation)?.title ??
     "Agent workspace";
@@ -3413,9 +3535,11 @@ const HeroAgent = memo(function HeroAgent({ locale }: { locale: Locale }) {
 function Navbar({
   locale,
   onLocaleChange,
+  homeHref = "",
 }: {
   locale: Locale;
   onLocaleChange: (locale: Locale) => void;
+  homeHref?: string;
 }) {
   const t = siteCopy[locale].nav;
   const nextLocale = locale === "en" ? "zh" : "en";
@@ -3442,26 +3566,26 @@ function Navbar({
   return (
     <header className="site-header">
       <nav className="nav-shell glass-panel" aria-label="Primary navigation">
-        <a className="brand" href="#top" aria-label="Velora home">
+        <a className="brand" href={`${homeHref}#top`} aria-label="Velora home">
           <BrandMark />
           <span>Velora</span>
           <sup>alpha</sup>
         </a>
 
         <div id="primary-links" className={`nav-links ${open ? "is-open" : ""}`}>
-          <a href="#components" onClick={() => setOpen(false)}>
+          <a href={`${homeHref}#components`} onClick={() => setOpen(false)}>
             {t.components}
           </a>
-          <a href="#api" onClick={() => setOpen(false)}>
+          <a href={`${homeHref}#api`} onClick={() => setOpen(false)}>
             {t.api}
           </a>
-          <a href="#runtime" onClick={() => setOpen(false)}>
+          <a href={`${homeHref}#runtime`} onClick={() => setOpen(false)}>
             {t.runtime}
           </a>
-          <a href="#principles" onClick={() => setOpen(false)}>
+          <a href={`${homeHref}#principles`} onClick={() => setOpen(false)}>
             {t.principles}
           </a>
-          <a href="#open-source" onClick={() => setOpen(false)}>
+          <a href={`${homeHref}#open-source`} onClick={() => setOpen(false)}>
             {t.openSource}
           </a>
         </div>
@@ -3476,11 +3600,16 @@ function Navbar({
             <Globe2 size={14} />
             <span>{t.languageValue}</span>
           </button>
-          <a className="nav-github" href="#open-source">
-            <Braces size={15} />
-            <span>{t.openSource}</span>
+          <a
+            className="nav-github"
+            href="https://github.com/Whiskeyi/velora-ai"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Github size={15} />
+            <span>GitHub</span>
           </a>
-          <a className="nav-cta" href="#components">
+          <a className="nav-cta" href={`${homeHref}#components`}>
             {t.explore}
             <ArrowRight size={14} />
           </a>
@@ -3508,7 +3637,9 @@ function Hero({ locale }: { locale: Locale }) {
 
   const copyInstall = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText("npm run dev");
+      await navigator.clipboard.writeText(
+        "git clone https://github.com/Whiskeyi/velora-ai.git",
+      );
       setCopied(true);
       if (copyTimer.current) clearTimeout(copyTimer.current);
       copyTimer.current = setTimeout(() => setCopied(false), 1800);
@@ -3549,7 +3680,7 @@ function Hero({ locale }: { locale: Locale }) {
           </a>
           <button className="install-command" type="button" onClick={copyInstall}>
             <TerminalSquare size={15} />
-            <code>npm run dev</code>
+            <code>git clone Whiskeyi/velora-ai</code>
             {copied ? <Check size={14} /> : <Copy size={14} />}
             <span className="sr-only">{t.copyCommand}</span>
           </button>
@@ -3573,7 +3704,13 @@ function Hero({ locale }: { locale: Locale }) {
   );
 }
 
-function AccessibleLiveEditor() {
+function AccessibleLiveEditor({
+  locale,
+  onChange,
+}: {
+  locale: Locale;
+  onChange: (code: string) => void;
+}) {
   const editorRootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -3586,22 +3723,29 @@ function AccessibleLiveEditor() {
       if (!editor) return;
       editor.setAttribute("role", "textbox");
       editor.setAttribute("aria-multiline", "true");
-      editor.setAttribute("aria-label", "Editable TypeScript component example");
+      editor.setAttribute(
+        "aria-label",
+        locale === "zh" ? "可编辑的 TypeScript 组件示例" : "Editable TypeScript component example",
+      );
     };
     configureEditor();
     const observer = new MutationObserver(configureEditor);
     observer.observe(root, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, []);
+  }, [locale]);
 
   return (
     <div
       ref={editorRootRef}
       className="editor-wrap"
       role="group"
-      aria-label="Code editor; Tab moves focus out of the editor"
+      aria-label={
+        locale === "zh"
+          ? "代码编辑器；按 Tab 可将焦点移出编辑器"
+          : "Code editor; Tab moves focus out of the editor"
+      }
     >
-      <LiveEditor className="live-editor" tabMode="focus" />
+      <LiveEditor className="live-editor" tabMode="focus" onChange={onChange} />
     </div>
   );
 }
@@ -3669,20 +3813,30 @@ function ComponentWorkbench({
   locale,
   activeKey,
   onActiveKeyChange,
+  compact = false,
 }: {
   locale: Locale;
   activeKey: SampleKey;
   onActiveKeyChange: (key: SampleKey) => void;
+  compact?: boolean;
 }) {
   const t = siteCopy[locale].workbench;
   const [copied, setCopied] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
   const [viewport, setViewport] = useState<ViewportKey>("desktop");
   const [mobilePane, setMobilePane] = useState<"preview" | "code">("preview");
+  const [sampleCode, setSampleCode] = useState<Record<SampleKey, string>>(() =>
+    Object.fromEntries(samples.map((sample) => [sample.key, sample.code])) as Record<
+      SampleKey,
+      string
+    >,
+  );
   const sectionRef = useRef<HTMLElement | null>(null);
   const catalogRef = useRef<HTMLDivElement | null>(null);
+  const viewportWasChosen = useRef(false);
   const activeSample = samples.find((sample) => sample.key === activeKey) ?? samples[0];
   const activeDoc = componentDocs[activeSample.key][locale];
+  const activeCode = sampleCode[activeSample.key];
   const viewportOptions = [
     { key: "desktop" as const, label: t.viewports.desktop, Icon: Monitor },
     { key: "tablet" as const, label: t.viewports.tablet, Icon: Tablet },
@@ -3715,7 +3869,9 @@ function ComponentWorkbench({
   useEffect(() => {
     const mobileQuery = window.matchMedia("(max-width: 720px)");
     const syncViewport = () => {
-      if (mobileQuery.matches) setViewport("mobile");
+      if (!viewportWasChosen.current) {
+        setViewport(mobileQuery.matches ? "mobile" : "desktop");
+      }
     };
     syncViewport();
     mobileQuery.addEventListener("change", syncViewport);
@@ -3764,17 +3920,27 @@ function ComponentWorkbench({
 
   const copyCode = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(activeSample.code);
+      await navigator.clipboard.writeText(activeCode);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
       setCopied(false);
     }
-  }, [activeSample.code]);
+  }, [activeCode]);
+
+  const resetCode = useCallback(() => {
+    setSampleCode((current) => ({
+      ...current,
+      [activeSample.key]: activeSample.code,
+    }));
+  }, [activeSample]);
 
   return (
-    <section ref={sectionRef} className="workbench-section section-shell">
-      <div className="section-heading">
+    <section
+      ref={sectionRef}
+      className={`workbench-section section-shell${compact ? " is-compact" : ""}`}
+    >
+      {!compact ? <div className="section-heading">
         <div>
           <span className="section-kicker">
             <Braces size={14} /> {t.kicker}
@@ -3782,10 +3948,10 @@ function ComponentWorkbench({
           <h2>{t.title}</h2>
         </div>
         <p>{t.lede}</p>
-      </div>
+      </div> : null}
 
-      <div id="components" className="workbench glass-panel">
-        <aside className="component-catalog" aria-label={t.catalog}>
+      <div id="components" className={`workbench glass-panel${compact ? " is-compact" : ""}`}>
+        {!compact ? <aside className="component-catalog" aria-label={t.catalog}>
           <div className="catalog-heading">
             <span>{t.catalog}</span>
             <span>{samples.length}</span>
@@ -3814,7 +3980,7 @@ function ComponentWorkbench({
             <Sparkles size={14} />
             <p>{t.catalogNote}</p>
           </div>
-        </aside>
+        </aside> : null}
 
         <div className="workbench-main">
           <div className="workbench-titlebar">
@@ -3838,7 +4004,7 @@ function ComponentWorkbench({
             >
             <LiveProvider
               key={activeSample.key}
-              code={activeSample.code}
+              code={activeCode}
               scope={scope}
               language="tsx"
               enableTypeScript
@@ -3888,7 +4054,10 @@ function ComponentWorkbench({
                           type="button"
                           aria-label={label}
                           aria-pressed={viewport === key}
-                          onClick={() => setViewport(key)}
+                          onClick={() => {
+                            viewportWasChosen.current = true;
+                            setViewport(key);
+                          }}
                         >
                           <Icon size={13} />
                         </button>
@@ -3911,16 +4080,35 @@ function ComponentWorkbench({
                     <span>
                       <Code2 size={12} /> {t.appFile}
                     </span>
-                    <button
-                      type="button"
-                      onClick={copyCode}
-                      aria-label={`${t.copy} ${activeSample.name}`}
-                    >
-                      {copied ? <Check size={13} /> : <Copy size={13} />}
-                      {copied ? t.copied : t.copy}
-                    </button>
+                    <div className="code-pane-actions">
+                      <button
+                        type="button"
+                        onClick={resetCode}
+                        aria-label={t.resetCode}
+                        disabled={activeCode === activeSample.code}
+                      >
+                        <RotateCcw size={13} />
+                        {t.reset}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={copyCode}
+                        aria-label={`${t.copy} ${activeSample.name}`}
+                      >
+                        {copied ? <Check size={13} /> : <Copy size={13} />}
+                        {copied ? t.copied : t.copy}
+                      </button>
+                    </div>
                   </div>
-                  <AccessibleLiveEditor />
+                  <AccessibleLiveEditor
+                    locale={locale}
+                    onChange={(code) =>
+                      setSampleCode((current) => ({
+                        ...current,
+                        [activeSample.key]: code,
+                      }))
+                    }
+                  />
                   <LiveError className="live-error" />
                 </div>
               </div>
@@ -4045,13 +4233,121 @@ function getUsageSnippet(key: SampleKey): string {
   }
 }
 
-function ComponentApiSection({
+function ComponentApiCard({
+  componentKey,
   locale,
-  onSelectComponent,
+  showDemoLink = false,
 }: {
+  componentKey: SampleKey;
   locale: Locale;
-  onSelectComponent: (key: SampleKey) => void;
+  showDemoLink?: boolean;
 }) {
+  const t = siteCopy[locale].api;
+  const sample = samples.find((item) => item.key === componentKey) ?? samples[0];
+  const doc = componentDocs[componentKey][locale];
+  const spec = componentApiSpecs[componentKey];
+  const importStatement = `import { ${spec.importName} } from "@velora-ai/react";`;
+
+  return (
+    <article className="api-card glass-panel" id="api-reference">
+      <div className="api-card-head">
+        <div>
+          <span className="component-badge">{doc.eyebrow}</span>
+          <h3>{sample.name}</h3>
+          <p>{doc.description}</p>
+        </div>
+        {showDemoLink ? (
+          <a className="api-demo-link" href="#components">
+            {t.editDemo}
+            <ChevronRight size={14} />
+          </a>
+        ) : null}
+      </div>
+
+      <div className="api-overview-grid" id="overview">
+        <section>
+          <h4>{t.overview}</h4>
+          <p>{doc.summary}</p>
+        </section>
+        <section>
+          <h4>{t.useCases}</h4>
+          <ul>
+            {doc.useCases.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      <div className="api-usage-grid" id="usage">
+        <section>
+          <h4>{t.importLabel}</h4>
+          <pre>
+            <code>{importStatement}</code>
+          </pre>
+        </section>
+        <section>
+          <h4>{t.quickUse}</h4>
+          <pre>
+            <code>{getUsageSnippet(componentKey)}</code>
+          </pre>
+        </section>
+      </div>
+
+      <div
+        className="api-table-wrap"
+        id="props"
+        role="region"
+        aria-label={`${sample.name} ${t.api}`}
+      >
+        <table className="api-table">
+          <thead>
+            <tr>
+              <th>{t.prop}</th>
+              <th>{t.type}</th>
+              <th>{t.defaultValue}</th>
+              <th>{t.description}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {spec.props.map((prop) => (
+              <tr key={prop.name}>
+                <td>
+                  <code>{prop.name}</code>
+                  {prop.required ? <span>{t.required}</span> : null}
+                </td>
+                <td>
+                  <code>{prop.type}</code>
+                </td>
+                <td>
+                  <code>{prop.defaultValue === "—" ? t.emptyDefault : prop.defaultValue}</code>
+                </td>
+                <td>{prop.description?.[locale] ?? getPropDescription(doc, prop.name, locale)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="api-contract-grid" id="behavior">
+        <section>
+          <h4>{t.interaction}</h4>
+          <ul>
+            {doc.interactions.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </section>
+        <section>
+          <h4>{t.integration}</h4>
+          <p>{doc.integration}</p>
+        </section>
+      </div>
+    </article>
+  );
+}
+
+function ComponentApiSection({ locale }: { locale: Locale }) {
   const t = siteCopy[locale].api;
 
   return (
@@ -4066,7 +4362,7 @@ function ComponentApiSection({
         <p>{t.lede}</p>
       </div>
 
-      <div className="api-layout">
+      <div className="api-layout api-index-layout">
         <aside className="api-nav glass-panel" aria-label={t.navLabel}>
           {componentApiGroups.map((group) => (
             <div className="api-nav-group" key={group.id}>
@@ -4076,7 +4372,7 @@ function ComponentApiSection({
                 {group.keys.map((key) => {
                   const sample = samples.find((item) => item.key === key);
                   return sample ? (
-                    <a href={`#api-${key}`} key={key}>
+                    <a href={getComponentHref(key)} key={key}>
                       {sample.name}
                     </a>
                   ) : null;
@@ -4086,112 +4382,23 @@ function ComponentApiSection({
           ))}
         </aside>
 
-        <div className="api-content">
+        <div className="api-index-grid">
           {componentApiGroups.flatMap((group) =>
             group.keys.map((key) => {
               const sample = samples.find((item) => item.key === key);
               if (!sample) return null;
               const doc = componentDocs[key][locale];
-              const spec = componentApiSpecs[key];
-              const importStatement = `import { ${spec.importName} } from "@velora-ai/react";`;
 
               return (
-                <article className="api-card glass-panel" id={`api-${key}`} key={key}>
-                  <div className="api-card-head">
-                    <div>
-                      <span className="component-badge">{doc.eyebrow}</span>
-                      <h3>{sample.name}</h3>
-                      <p>{doc.description}</p>
-                    </div>
-                    <a
-                      className="api-demo-link"
-                      href="#components"
-                      onClick={() => onSelectComponent(key)}
-                    >
-                      {t.editDemo}
-                      <ChevronRight size={14} />
-                    </a>
-                  </div>
-
-                  <div className="api-overview-grid">
-                    <section>
-                      <h4>{t.overview}</h4>
-                      <p>{doc.summary}</p>
-                    </section>
-                    <section>
-                      <h4>{t.useCases}</h4>
-                      <ul>
-                        {doc.useCases.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    </section>
-                  </div>
-
-                  <div className="api-usage-grid">
-                    <section>
-                      <h4>{t.importLabel}</h4>
-                      <pre>
-                        <code>{importStatement}</code>
-                      </pre>
-                    </section>
-                    <section>
-                      <h4>{t.quickUse}</h4>
-                      <pre>
-                        <code>{getUsageSnippet(key)}</code>
-                      </pre>
-                    </section>
-                  </div>
-
-                  <div
-                    className="api-table-wrap"
-                    role="region"
-                    aria-label={`${sample.name} ${t.api}`}
-                  >
-                    <table className="api-table">
-                      <thead>
-                        <tr>
-                          <th>{t.prop}</th>
-                          <th>{t.type}</th>
-                          <th>{t.defaultValue}</th>
-                          <th>{t.description}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {spec.props.map((prop) => (
-                          <tr key={prop.name}>
-                            <td>
-                              <code>{prop.name}</code>
-                              {prop.required ? <span>{t.required}</span> : null}
-                            </td>
-                            <td>
-                              <code>{prop.type}</code>
-                            </td>
-                            <td>
-                              <code>{prop.defaultValue === "—" ? t.emptyDefault : prop.defaultValue}</code>
-                            </td>
-                            <td>{getPropDescription(doc, prop.name)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="api-contract-grid">
-                    <section>
-                      <h4>{t.interaction}</h4>
-                      <ul>
-                        {doc.interactions.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    </section>
-                    <section>
-                      <h4>{t.integration}</h4>
-                      <p>{doc.integration}</p>
-                    </section>
-                  </div>
-                </article>
+                <a className="api-index-card glass-panel" href={getComponentHref(key)} key={key}>
+                  <span className="component-badge">{doc.eyebrow}</span>
+                  <h3>{sample.name}</h3>
+                  <p>{doc.description}</p>
+                  <span className="api-index-card__action">
+                    {locale === "zh" ? "查看文档与示例" : "View docs & example"}
+                    <ChevronRight size={14} />
+                  </span>
+                </a>
               );
             }),
           )}
@@ -4326,7 +4533,7 @@ function Principles({ locale }: { locale: Locale }) {
   );
 }
 
-function Footer({ locale }: { locale: Locale }) {
+function Footer({ locale, homeHref = "" }: { locale: Locale; homeHref?: string }) {
   const t = siteCopy[locale].footer;
 
   return (
@@ -4340,16 +4547,16 @@ function Footer({ locale }: { locale: Locale }) {
           <p>{t.lede}</p>
         </div>
         <div className="footer-actions">
-          <a className="primary-button" href="#runtime">
+          <a className="primary-button" href={`${homeHref}#runtime`}>
             <Braces size={16} /> {t.architecture}
           </a>
-          <a href="#top">
+          <a href={`${homeHref}#top`}>
             {t.top} <ArrowRight size={14} />
           </a>
         </div>
       </div>
       <div className="footer-bottom">
-        <a className="brand" href="#top">
+        <a className="brand" href={`${homeHref}#top`}>
           <BrandMark /> <span>Velora</span>
         </a>
         <p>{t.tagline}</p>
@@ -4359,11 +4566,9 @@ function Footer({ locale }: { locale: Locale }) {
   );
 }
 
-export function ShowcaseClient() {
+function useShowcaseLocale() {
   const [locale, setLocale] = useState<Locale>("en");
   const [localeReady, setLocaleReady] = useState(false);
-  const [activeComponentKey, setActiveComponentKey] = useState<SampleKey>("prompt-composer");
-  const copy = siteCopy[locale];
 
   useEffect(() => {
     setLocale(getInitialLocale());
@@ -4376,10 +4581,21 @@ export function ShowcaseClient() {
     document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
   }, [locale, localeReady]);
 
+  return { locale, setLocale };
+}
+
+function ShowcaseTheme({
+  children,
+  locale,
+}: {
+  children: ReactNode;
+  locale: Locale;
+}) {
   return (
     <VeloraProvider
       className="showcase-provider"
       theme="dark"
+      locale={locale === "zh" ? "zh-CN" : "en-US"}
       tokens={{
         accent: "#7f96ff",
         accentContrast: "#070a10",
@@ -4400,6 +4616,124 @@ export function ShowcaseClient() {
         fontMono: "var(--font-mono)",
       }}
     >
+      {children}
+    </VeloraProvider>
+  );
+}
+
+export function ComponentDetailClient({ componentKey }: { componentKey: SampleKey }) {
+  const { locale, setLocale } = useShowcaseLocale();
+  const detailSidebarRef = useRef<HTMLElement | null>(null);
+  const sample = samples.find((item) => item.key === componentKey) ?? samples[0];
+  const doc = componentDocs[componentKey][locale];
+  const currentIndex = COMPONENT_KEYS.indexOf(componentKey);
+  const previousKey = COMPONENT_KEYS[(currentIndex - 1 + COMPONENT_KEYS.length) % COMPONENT_KEYS.length];
+  const nextKey = COMPONENT_KEYS[(currentIndex + 1) % COMPONENT_KEYS.length];
+  const homeHref = getHomeHref();
+
+  useEffect(() => {
+    const sidebar = detailSidebarRef.current;
+    const activeLink = sidebar?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!sidebar || !activeLink || sidebar.scrollWidth <= sidebar.clientWidth) return;
+    const sidebarRect = sidebar.getBoundingClientRect();
+    const activeRect = activeLink.getBoundingClientRect();
+    sidebar.scrollTo({
+      left:
+        sidebar.scrollLeft +
+        activeRect.left -
+        sidebarRect.left -
+        (sidebarRect.width - activeRect.width) / 2,
+      behavior: "instant",
+    });
+  }, [componentKey, locale]);
+
+  return (
+    <ShowcaseTheme locale={locale}>
+      <main className="component-detail-page" id="top">
+        <div className="page-noise" aria-hidden="true" />
+        <Navbar locale={locale} onLocaleChange={setLocale} homeHref={homeHref} />
+
+        <header className="component-detail-hero section-shell">
+          <nav aria-label={locale === "zh" ? "面包屑" : "Breadcrumb"}>
+            <a href={homeHref}>{locale === "zh" ? "组件" : "Components"}</a>
+            <ChevronRight size={13} />
+            <span>{sample.name}</span>
+          </nav>
+          <span className="component-badge">{doc.eyebrow}</span>
+          <h1>{sample.name}</h1>
+          <p>{doc.description}</p>
+        </header>
+
+        <div className="component-detail-layout section-shell">
+          <aside
+            ref={detailSidebarRef}
+            className="component-detail-sidebar glass-panel"
+            aria-label={siteCopy[locale].api.navLabel}
+          >
+            {componentApiGroups.map((group) => (
+              <div key={group.id}>
+                <strong>{group.title[locale]}</strong>
+                {group.keys.map((key) => {
+                  const item = samples.find((entry) => entry.key === key);
+                  return item ? (
+                    <a
+                      className={key === componentKey ? "is-active" : ""}
+                      href={getComponentHref(key)}
+                      key={key}
+                      aria-current={key === componentKey ? "page" : undefined}
+                    >
+                      {item.name}
+                    </a>
+                  ) : null;
+                })}
+              </div>
+            ))}
+          </aside>
+
+          <div className="component-detail-main">
+            <section id="demo" aria-label={locale === "zh" ? "实时示例" : "Live example"}>
+              <ComponentWorkbench
+                locale={locale}
+                activeKey={componentKey}
+                onActiveKeyChange={() => undefined}
+                compact
+              />
+            </section>
+            <ComponentApiCard componentKey={componentKey} locale={locale} />
+            <nav className="component-detail-pagination" aria-label={locale === "zh" ? "组件翻页" : "Component pagination"}>
+              <a href={getComponentHref(previousKey)}>
+                <span>{locale === "zh" ? "上一个" : "Previous"}</span>
+                <strong>{samples.find((item) => item.key === previousKey)?.name}</strong>
+              </a>
+              <a href={getComponentHref(nextKey)}>
+                <span>{locale === "zh" ? "下一个" : "Next"}</span>
+                <strong>{samples.find((item) => item.key === nextKey)?.name}</strong>
+              </a>
+            </nav>
+          </div>
+
+          <aside className="component-detail-toc" aria-label={locale === "zh" ? "本页目录" : "On this page"}>
+            <span>{locale === "zh" ? "本页目录" : "On this page"}</span>
+            <a href="#demo">{locale === "zh" ? "实时示例" : "Live example"}</a>
+            <a href="#overview">{siteCopy[locale].api.overview}</a>
+            <a href="#usage">{siteCopy[locale].api.quickUse}</a>
+            <a href="#props">Props</a>
+            <a href="#behavior">{siteCopy[locale].api.interaction}</a>
+          </aside>
+        </div>
+        <Footer locale={locale} homeHref={homeHref} />
+      </main>
+    </ShowcaseTheme>
+  );
+}
+
+export function ShowcaseClient() {
+  const { locale, setLocale } = useShowcaseLocale();
+  const [activeComponentKey, setActiveComponentKey] = useState<SampleKey>("prompt-composer");
+  const copy = siteCopy[locale];
+
+  return (
+    <ShowcaseTheme locale={locale}>
       <main>
         <div className="page-noise" aria-hidden="true" />
         <Navbar locale={locale} onLocaleChange={setLocale} />
@@ -4420,11 +4754,11 @@ export function ShowcaseClient() {
           activeKey={activeComponentKey}
           onActiveKeyChange={setActiveComponentKey}
         />
-        <ComponentApiSection locale={locale} onSelectComponent={setActiveComponentKey} />
+        <ComponentApiSection locale={locale} />
         <RuntimeSection locale={locale} />
         <Principles locale={locale} />
         <Footer locale={locale} />
       </main>
-    </VeloraProvider>
+    </ShowcaseTheme>
   );
 }

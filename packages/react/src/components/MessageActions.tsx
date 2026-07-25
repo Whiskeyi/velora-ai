@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import type { AgentMessage } from "../runtime";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import {
   composeStyles,
   cx,
@@ -71,22 +71,6 @@ export interface MessageActionsProps extends Omit<
   classNames?: SemanticClassNames<MessageActionsSlot>;
   styles?: SemanticStyles<MessageActionsSlot>;
 }
-
-const defaultPendingLabels: Record<MessageActionKind, string> = {
-  copy: "Copying message",
-  regenerate: "Requesting a new response",
-  edit: "Opening message editor",
-  like: "Saving positive feedback",
-  dislike: "Saving negative feedback",
-};
-
-const defaultSuccessLabels: Record<MessageActionKind, string> = {
-  copy: "Message copied",
-  regenerate: "New response requested",
-  edit: "Message editor opened",
-  like: "Feedback saved",
-  dislike: "Feedback saved",
-};
 
 async function writeClipboard(value: string): Promise<void> {
   if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
@@ -162,13 +146,13 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
       onEdit,
       onFeedbackChange,
       onActionError,
-      ariaLabel = "Message actions",
-      copyLabel = "Copy message",
-      regenerateLabel = "Regenerate response",
-      editLabel = "Edit message",
-      likeLabel = "Helpful",
-      dislikeLabel = "Not helpful",
-      copiedLabel = "Message copied",
+      ariaLabel,
+      copyLabel,
+      regenerateLabel,
+      editLabel,
+      likeLabel,
+      dislikeLabel,
+      copiedLabel,
       pendingLabels,
       successLabels,
       errorLabel,
@@ -186,6 +170,15 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
     ref,
   ) {
     const componentClass = useComponentClass("message-actions");
+    const { messages } = useVelora();
+    const copy = messages.messageActions;
+    const resolvedAriaLabel = ariaLabel ?? copy.ariaLabel;
+    const resolvedCopyLabel = copyLabel ?? copy.copy;
+    const resolvedRegenerateLabel = regenerateLabel ?? copy.regenerate;
+    const resolvedEditLabel = editLabel ?? copy.edit;
+    const resolvedLikeLabel = likeLabel ?? copy.like;
+    const resolvedDislikeLabel = dislikeLabel ?? copy.dislike;
+    const resolvedCopiedLabel = copiedLabel ?? copy.copied;
     const controlled = feedback !== undefined;
     const [uncontrolledFeedback, setUncontrolledFeedback] =
       useState<MessageFeedback>(defaultFeedback);
@@ -196,8 +189,8 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
     const pendingRef = useRef<MessageActionKind | null>(null);
     const mountedRef = useRef(true);
     const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const mergedPendingLabels = { ...defaultPendingLabels, ...pendingLabels };
-    const mergedSuccessLabels = { ...defaultSuccessLabels, ...successLabels };
+    const mergedPendingLabels = { ...copy.pending, ...pendingLabels };
+    const mergedSuccessLabels = { ...copy.success, ...successLabels };
 
     useEffect(() => {
       mountedRef.current = true;
@@ -209,7 +202,7 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
 
     const announceSuccess = (action: MessageActionKind) => {
       if (!mountedRef.current) return;
-      setStatus(action === "copy" ? copiedLabel : mergedSuccessLabels[action]);
+      setStatus(action === "copy" ? resolvedCopiedLabel : mergedSuccessLabels[action]);
       if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
       statusTimerRef.current = setTimeout(() => {
         statusTimerRef.current = null;
@@ -290,7 +283,7 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
         className={cx(componentClass, classNames?.root, className)}
         style={composeStyles(styles?.root, style)}
         role="toolbar"
-        aria-label={ariaLabel}
+        aria-label={resolvedAriaLabel}
         aria-busy={pendingAction != null || undefined}
         data-pending={pendingAction ?? undefined}
       >
@@ -299,7 +292,7 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
             className={buttonClassName("copy")}
             style={buttonStyle("copy")}
             type="button"
-            aria-label={copyLabel}
+            aria-label={resolvedCopyLabel}
             aria-busy={pendingAction === "copy" || undefined}
             data-action="copy"
             disabled={actionDisabled}
@@ -313,7 +306,7 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
             className={buttonClassName("regenerate")}
             style={buttonStyle("regenerate")}
             type="button"
-            aria-label={regenerateLabel}
+            aria-label={resolvedRegenerateLabel}
             aria-busy={pendingAction === "regenerate" || undefined}
             data-action="regenerate"
             disabled={actionDisabled}
@@ -327,7 +320,7 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
             className={buttonClassName("edit")}
             style={buttonStyle("edit")}
             type="button"
-            aria-label={editLabel}
+            aria-label={resolvedEditLabel}
             aria-busy={pendingAction === "edit" || undefined}
             data-action="edit"
             disabled={actionDisabled}
@@ -342,7 +335,7 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
               className={buttonClassName("like")}
               style={buttonStyle("like")}
               type="button"
-              aria-label={likeLabel}
+              aria-label={resolvedLikeLabel}
               aria-pressed={currentFeedback === "like"}
               aria-busy={pendingAction === "like" || undefined}
               data-action="like"
@@ -355,7 +348,7 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
               className={buttonClassName("dislike")}
               style={buttonStyle("dislike")}
               type="button"
-              aria-label={dislikeLabel}
+              aria-label={resolvedDislikeLabel}
               aria-pressed={currentFeedback === "dislike"}
               aria-busy={pendingAction === "dislike" || undefined}
               data-action="dislike"

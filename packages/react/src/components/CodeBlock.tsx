@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import { cx, errorMessage, useControllableState } from "./utils";
 
 export interface TrustedHighlightedCode {
@@ -92,28 +92,28 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
     filename,
     highlighter,
     showCopy = true,
-    copyLabel = "Copy code",
-    copiedLabel = "Copied",
+    copyLabel,
+    copiedLabel,
     onCopy,
     wrap,
     defaultWrap = false,
     onWrapChange,
     showWrapToggle = false,
-    wrapLabel = "Wrap lines",
-    unwrapLabel = "Disable line wrap",
+    wrapLabel,
+    unwrapLabel,
     collapsible = false,
     collapsed,
     defaultCollapsed = true,
     onCollapsedChange,
     collapseAfterLines = 16,
-    expandLabel = "Show all code",
-    collapseLabel = "Collapse code",
+    expandLabel,
+    collapseLabel,
     showDownload = false,
     downloadFilename,
-    downloadLabel = "Download code",
+    downloadLabel,
     onDownload,
     actions,
-    retryHighlightLabel = "Retry highlighting",
+    retryHighlightLabel,
     onHighlightError,
     className,
     ...rest
@@ -121,6 +121,16 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
   ref,
 ) {
   const componentClass = useComponentClass("code-block");
+  const { messages } = useVelora();
+  const copy = messages.codeBlock;
+  const resolvedCopyLabel = copyLabel ?? copy.copy;
+  const resolvedCopiedLabel = copiedLabel ?? copy.copied;
+  const resolvedWrapLabel = wrapLabel ?? copy.wrap;
+  const resolvedUnwrapLabel = unwrapLabel ?? copy.unwrap;
+  const resolvedExpandLabel = expandLabel ?? copy.expand;
+  const resolvedCollapseLabel = collapseLabel ?? copy.collapse;
+  const resolvedDownloadLabel = downloadLabel ?? copy.download;
+  const resolvedRetryHighlightLabel = retryHighlightLabel ?? copy.retryHighlight;
   const [highlighted, setHighlighted] = useState<CodeHighlightResult | null>(null);
   const [highlightError, setHighlightError] = useState<string | null>(null);
   const [highlighting, setHighlighting] = useState(false);
@@ -228,7 +238,7 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
               type="button"
               onClick={() => setHighlightAttempt((current) => current + 1)}
             >
-              {retryHighlightLabel}
+              {resolvedRetryHighlightLabel}
             </button>
           ) : null}
           {showWrapToggle ? (
@@ -238,7 +248,7 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
               aria-pressed={lineWrap}
               onClick={() => setLineWrap((current) => !current)}
             >
-              {lineWrap ? unwrapLabel : wrapLabel}
+              {lineWrap ? resolvedUnwrapLabel : resolvedWrapLabel}
             </button>
           ) : null}
           {showDownload ? (
@@ -247,7 +257,7 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
               type="button"
               onClick={handleDownload}
             >
-              {downloadLabel}
+              {resolvedDownloadLabel}
             </button>
           ) : null}
           {showCopy ? (
@@ -256,7 +266,9 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
               <rect x="7" y="7" width="9" height="9" rx="2" />
               <path d="M13 7V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1" />
             </svg>
-            <span aria-live="polite">{copied ? copiedLabel : copyLabel}</span>
+            <span aria-live="polite">
+              {copied ? resolvedCopiedLabel : resolvedCopyLabel}
+            </span>
           </button>
           ) : null}
         </div>
@@ -277,7 +289,7 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
           aria-expanded={!isCollapsed}
           onClick={() => setIsCollapsed((current) => !current)}
         >
-          {isCollapsed ? expandLabel : collapseLabel}
+          {isCollapsed ? resolvedExpandLabel : resolvedCollapseLabel}
         </button>
       ) : null}
       {highlightError ? (

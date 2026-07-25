@@ -26,5 +26,34 @@ export default defineConfig({
     target: "es2022",
     outDir: fromProjectRoot("./dist-pages"),
     emptyOutDir: true,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: "react-core",
+              test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+              priority: 30,
+            },
+            {
+              name: "rich-content",
+              test:
+                /node_modules[\\/](katex|react-markdown|remark-|rehype-|unified|micromark|mdast|hast)/,
+              priority: 20,
+            },
+            {
+              name: "workbench",
+              test: /node_modules[\\/](react-live|prism-react-renderer)[\\/]/,
+              priority: 20,
+            },
+            {
+              name: "ui-runtime",
+              test: /node_modules[\\/](lucide-react|zustand)[\\/]/,
+              priority: 10,
+            },
+          ],
+        },
+      },
+    },
   },
 });

@@ -1,7 +1,7 @@
 import { forwardRef, memo, type HTMLAttributes, type ReactNode } from "react";
 import type { AgentMessage } from "../runtime";
 import { StreamingIndicator } from "./StreamingIndicator";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import {
   composeStyles,
   cx,
@@ -59,19 +59,6 @@ export interface MessageBubbleProps extends Omit<HTMLAttributes<HTMLElement>, "c
   styles?: SemanticStyles<MessageBubbleSlot>;
 }
 
-const defaultRoleLabels: Record<AgentMessage["role"], ReactNode> = {
-  system: "System",
-  user: "You",
-  assistant: "Assistant",
-  tool: "Tool",
-};
-
-const defaultStatusLabels: Partial<Record<AgentMessage["status"], ReactNode>> = {
-  queued: "Queued",
-  error: "Failed",
-  aborted: "Stopped",
-};
-
 function renderSlot(
   slot: MessageBubbleSlotContent | undefined,
   message: AgentMessage,
@@ -103,8 +90,23 @@ function MessageBubbleInner(
   ref: React.ForwardedRef<HTMLElement>,
 ) {
   const componentClass = useComponentClass("message-bubble");
-  const mergedRoleLabels = { ...defaultRoleLabels, ...roleLabels };
-  const mergedStatusLabels = { ...defaultStatusLabels, ...statusLabels };
+  const { messages } = useVelora();
+  const copy = messages.messageBubble;
+  const mergedRoleLabels: Record<AgentMessage["role"], ReactNode> = {
+    system: copy.system,
+    user: copy.user,
+    assistant: copy.assistant,
+    tool: copy.tool,
+    ...roleLabels,
+  };
+  const mergedStatusLabels: Partial<Record<AgentMessage["status"], ReactNode>> = {
+    queued: copy.queued,
+    streaming: copy.streaming,
+    complete: copy.complete,
+    error: copy.error,
+    aborted: copy.aborted,
+    ...statusLabels,
+  };
   const timestamp = showTimestamp ? new Date(message.createdAt) : null;
   const timestampContent = showTimestamp
     ? formatTimestamp

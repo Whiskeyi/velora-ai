@@ -54,7 +54,7 @@ const componentNames = [
 
 function extractSamples(source) {
   const registryStart = source.indexOf("const samples: Sample[] = [");
-  const registryEnd = source.indexOf("\n];\n\nfunction BrandMark", registryStart);
+  const registryEnd = source.indexOf("\n];\n\nexport const COMPONENT_KEYS", registryStart);
 
   if (registryStart === -1 || registryEnd === -1) {
     throw new Error("Could not locate the showcase sample registry.");

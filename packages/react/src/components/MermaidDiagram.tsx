@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 import { StreamingIndicator } from "./StreamingIndicator";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import { assignRef, cx, errorMessage, useControllableState } from "./utils";
 
 export type SafeMermaidConfig = Omit<
@@ -124,13 +124,13 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
       maxZoom = 2,
       zoomStep = 0.15,
       onZoomChange,
-      controlsLabel = "Diagram controls",
-      zoomInLabel = "Zoom in",
-      zoomOutLabel = "Zoom out",
-      resetZoomLabel = "Reset zoom",
+      controlsLabel,
+      zoomInLabel,
+      zoomOutLabel,
+      resetZoomLabel,
       showCopySource = false,
-      copySourceLabel = "Copy diagram source",
-      copiedSourceLabel = "Copied",
+      copySourceLabel,
+      copiedSourceLabel,
       onCopySource,
       className,
       ...rest
@@ -138,6 +138,14 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
     forwardedRef,
   ) {
     const componentClass = useComponentClass("mermaid");
+    const { messages } = useVelora();
+    const copy = messages.mermaidDiagram;
+    const resolvedControlsLabel = controlsLabel ?? copy.controls;
+    const resolvedZoomInLabel = zoomInLabel ?? copy.zoomIn;
+    const resolvedZoomOutLabel = zoomOutLabel ?? copy.zoomOut;
+    const resolvedResetZoomLabel = resetZoomLabel ?? copy.resetZoom;
+    const resolvedCopySourceLabel = copySourceLabel ?? copy.copySource;
+    const resolvedCopiedSourceLabel = copiedSourceLabel ?? copy.copied;
     const generatedId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
     const renderId = `vl-mermaid-${generatedId}`;
     const errorId = `${renderId}-error`;
@@ -272,20 +280,24 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
         {result ? (
           <>
             {interactive || showCopySource ? (
-              <div className="vl-mermaid__controls" role="toolbar" aria-label={controlsLabel}>
+              <div
+                className="vl-mermaid__controls"
+                role="toolbar"
+                aria-label={resolvedControlsLabel}
+              >
                 {interactive ? (
                   <>
                     <button
                       type="button"
                       onClick={() => updateZoom(currentZoom - zoomStep)}
                       disabled={currentZoom <= normalizedMinZoom}
-                      aria-label={zoomOutLabel}
+                      aria-label={resolvedZoomOutLabel}
                     >−</button>
                     <button
                       type="button"
                       className="vl-mermaid__zoom-value"
                       onClick={() => updateZoom(1)}
-                      aria-label={resetZoomLabel}
+                      aria-label={resolvedResetZoomLabel}
                     >
                       {Math.round(currentZoom * 100)}%
                     </button>
@@ -293,13 +305,17 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
                       type="button"
                       onClick={() => updateZoom(currentZoom + zoomStep)}
                       disabled={currentZoom >= normalizedMaxZoom}
-                      aria-label={zoomInLabel}
+                      aria-label={resolvedZoomInLabel}
                     >+</button>
                   </>
                 ) : null}
                 {showCopySource ? (
-                  <button type="button" onClick={copySource} aria-label={copySourceLabel}>
-                    {copied ? copiedSourceLabel : copySourceLabel}
+                  <button
+                    type="button"
+                    onClick={copySource}
+                    aria-label={resolvedCopySourceLabel}
+                  >
+                    {copied ? resolvedCopiedSourceLabel : resolvedCopySourceLabel}
                   </button>
                 ) : null}
               </div>
@@ -309,7 +325,7 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
                 className="vl-mermaid__canvas"
                 style={canvasStyle}
                 role="img"
-                aria-label={typeof title === "string" ? title : "Mermaid diagram"}
+                aria-label={typeof title === "string" ? title : copy.diagram}
                 dangerouslySetInnerHTML={{ __html: result.svg }}
               />
             </div>

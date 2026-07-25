@@ -8,7 +8,7 @@
     "type": "git",
     "url": "git+https://github.com/Whiskeyi/velora-ai.git"
   },
-  "homepage": "https://whiskeyi.github.io/velora-ai/",
+  "homepage": "https://ai.components.zhuchj.com/",
   "bugs": {
     "url": "https://github.com/Whiskeyi/velora-ai/issues"
   },
@@ -23,18 +23,21 @@
   "scripts": {
     "dev": "vp dev",
     "build": "vp build",
-    "build:pages": "vp build --config vite.pages.config.ts",
+    "build:pages": "vp build --config vite.pages.config.ts && node scripts/prepare-pages-routes.mjs",
     "build:library": "vp pack",
     "build:all": "vp pack && vp build",
     "preview": "vp preview",
+    "preview:pages": "vp preview --config vite.pages.config.ts --host 127.0.0.1 --port 4174",
     "check": "vp check",
     "lint": "vp lint",
     "format": "vp fmt",
     "test": "vp test run",
+    "test:e2e": "playwright test",
     "typecheck": "vp exec tsc --noEmit",
     "verify:package": "node scripts/verify-package.mjs",
     "verify:showcase": "node scripts/verify-showcase-samples.mjs",
-    "verify:site-css": "node scripts/verify-site-css.mjs"
+    "verify:site-css": "node scripts/verify-site-css.mjs",
+    "verify:bundle": "node scripts/check-bundle-size.mjs"
   },
   "dependencies": {
     "katex": "^0.16.22",
@@ -52,6 +55,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
+    "@playwright/test": "^1.62.0",
     "@types/katex": "^0.16.7",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",

@@ -1527,6 +1527,17 @@ main {
   color: #bdc6d7;
 }
 
+.code-pane-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.code-pane-bar button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
 .editor-wrap {
   min-height: 0;
   overflow: auto;
@@ -2033,6 +2044,230 @@ main {
 .api-contract-grid section:last-child {
   background: rgba(116, 228, 179, 0.035);
   border-color: rgba(116, 228, 179, 0.1);
+}
+
+.api-index-layout {
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+
+.api-index-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.api-index-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 190px;
+  padding: 22px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 0 0, rgba(127, 150, 255, 0.09), transparent 17rem),
+    rgba(11, 15, 23, 0.65);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.api-index-card:hover {
+  border-color: rgba(167, 187, 255, 0.23);
+  background-color: rgba(18, 24, 36, 0.78);
+  transform: translateY(-2px);
+}
+
+.api-index-card h3 {
+  margin: 11px 0 8px;
+  color: #edf2fc;
+  font-size: 18px;
+  letter-spacing: -0.035em;
+}
+
+.api-index-card p {
+  margin: 0;
+  color: #7f8ba0;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.api-index-card__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: auto;
+  padding-top: 18px;
+  color: #aebcf3;
+  font-size: 10px;
+  font-weight: 620;
+}
+
+/* Component details */
+.component-detail-page {
+  padding-top: 1px;
+}
+
+.component-detail-hero {
+  padding-top: 154px;
+  padding-bottom: 58px;
+}
+
+.component-detail-hero nav {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 34px;
+  color: #66738a;
+  font-size: 10px;
+}
+
+.component-detail-hero nav a {
+  color: #9aa7bc;
+}
+
+.component-detail-hero h1 {
+  margin: 12px 0 14px;
+  color: #f3f6ff;
+  font-size: clamp(44px, 6vw, 76px);
+  font-weight: 620;
+  letter-spacing: -0.065em;
+  line-height: 0.98;
+}
+
+.component-detail-hero > p {
+  max-width: 720px;
+  margin: 0;
+  color: #8b97aa;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.component-detail-layout {
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr) 132px;
+  gap: 24px;
+  align-items: start;
+  padding-bottom: 130px;
+}
+
+.component-detail-sidebar {
+  position: sticky;
+  top: 96px;
+  display: grid;
+  max-height: calc(100vh - 120px);
+  gap: 18px;
+  overflow: auto;
+  padding: 16px 10px;
+  border-radius: 18px;
+  scrollbar-width: thin;
+}
+
+.component-detail-sidebar > div {
+  display: grid;
+  gap: 3px;
+}
+
+.component-detail-sidebar strong {
+  padding: 0 9px 7px;
+  color: #637087;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.component-detail-sidebar a {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #8c98ad;
+  font-size: 10px;
+}
+
+.component-detail-sidebar a:hover,
+.component-detail-sidebar a.is-active {
+  border-color: rgba(167, 187, 255, 0.12);
+  background: rgba(127, 150, 255, 0.08);
+  color: #e0e7f5;
+}
+
+.component-detail-main {
+  display: grid;
+  min-width: 0;
+  gap: 24px;
+}
+
+.component-detail-main .workbench-section {
+  width: 100%;
+  padding: 0;
+}
+
+.workbench.is-compact {
+  grid-template-columns: minmax(0, 1fr);
+  height: min(680px, calc(100vh - 128px));
+}
+
+.component-detail-toc {
+  position: sticky;
+  top: 110px;
+  display: grid;
+  gap: 4px;
+  padding-left: 14px;
+  border-left: 1px solid rgba(207, 219, 255, 0.1);
+}
+
+.component-detail-toc span {
+  margin-bottom: 7px;
+  color: #d5deed;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.component-detail-toc a {
+  padding: 5px 0;
+  color: #6f7c91;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.component-detail-toc a:hover {
+  color: #b9c5d9;
+}
+
+.component-detail-pagination {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.component-detail-pagination a {
+  display: grid;
+  gap: 6px;
+  min-height: 76px;
+  padding: 16px 18px;
+  border: 1px solid rgba(198, 213, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.component-detail-pagination a:last-child {
+  text-align: right;
+}
+
+.component-detail-pagination span {
+  color: #657188;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.component-detail-pagination strong {
+  color: #c9d3e4;
+  font-size: 12px;
 }
 
 /* Runtime */
@@ -2602,6 +2837,14 @@ main {
     --page: calc(100vw - 36px);
   }
 
+  .component-detail-layout {
+    grid-template-columns: 168px minmax(0, 1fr);
+  }
+
+  .component-detail-toc {
+    display: none;
+  }
+
   .nav-shell {
     grid-template-columns: 1fr auto;
   }
@@ -2816,6 +3059,67 @@ main {
 @media (max-width: 720px) {
   :root {
     --page: calc(100vw - 28px);
+  }
+
+  .api-index-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .api-index-card {
+    min-height: 170px;
+  }
+
+  .component-detail-hero {
+    padding-top: 122px;
+    padding-bottom: 38px;
+  }
+
+  .component-detail-hero nav {
+    margin-bottom: 24px;
+  }
+
+  .component-detail-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding-bottom: 90px;
+  }
+
+  .component-detail-sidebar {
+    position: static;
+    display: flex;
+    max-height: none;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 8px;
+    scroll-snap-type: inline proximity;
+  }
+
+  .component-detail-sidebar > div {
+    display: flex;
+    gap: 4px;
+  }
+
+  .component-detail-sidebar strong {
+    display: none;
+  }
+
+  .component-detail-sidebar a {
+    min-width: max-content;
+    min-height: 44px;
+    padding: 0 13px;
+    scroll-snap-align: start;
+  }
+
+  .workbench.is-compact {
+    height: auto;
+  }
+
+  .component-detail-pagination {
+    grid-template-columns: 1fr;
+  }
+
+  .component-detail-pagination a:last-child {
+    text-align: left;
   }
 
   .site-header {

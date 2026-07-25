@@ -9,7 +9,7 @@ import {
   useRef,
 } from "react";
 import type { Conversation } from "../runtime";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import {
   composeStyles,
   cx,
@@ -79,17 +79,6 @@ export interface ConversationListProps
   styles?: SemanticStyles<ConversationListSlot>;
 }
 
-const defaultStatusLabels: Record<ConversationListStatus, string> = {
-  idle: "Idle",
-  unread: "Unread activity",
-  streaming: "Generating response",
-  error: "Needs attention",
-};
-
-function defaultTitle(conversation: Conversation): ReactNode {
-  return conversation.title?.trim() || "Untitled conversation";
-}
-
 export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
   function ConversationList(
     {
@@ -99,7 +88,7 @@ export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
       onActiveChange,
       renderItem,
       renderItemActions,
-      getTitle = defaultTitle,
+      getTitle,
       getDescription,
       getMeta,
       getStatus = () => "idle",
@@ -109,15 +98,15 @@ export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
       defaultQuery = "",
       onQueryChange,
       filterConversation,
-      searchPlaceholder = "Search conversations",
-      searchLabel = "Search conversations",
+      searchPlaceholder,
+      searchLabel,
       groupBy,
       renderGroupLabel,
       onCreate,
-      createLabel = "New conversation",
-      empty = "No conversations yet",
-      noResults = "No matching conversations",
-      ariaLabel = "Conversations",
+      createLabel,
+      empty,
+      noResults,
+      ariaLabel,
       className,
       style,
       classNames,
@@ -127,6 +116,16 @@ export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
     ref,
   ) {
     const componentClass = useComponentClass("conversation-list");
+    const { messages } = useVelora();
+    const copy = messages.conversationList;
+    const resolvedGetTitle =
+      getTitle ?? ((conversation: Conversation) => conversation.title?.trim() || copy.untitled);
+    const resolvedSearchPlaceholder = searchPlaceholder ?? copy.searchPlaceholder;
+    const resolvedSearchLabel = searchLabel ?? copy.searchLabel;
+    const resolvedCreateLabel = createLabel ?? copy.createLabel;
+    const resolvedEmpty = empty ?? copy.empty;
+    const resolvedNoResults = noResults ?? copy.noResults;
+    const resolvedAriaLabel = ariaLabel ?? copy.ariaLabel;
     const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
     const [currentActiveId, setCurrentActiveId] = useControllableState({
       value: activeId,
@@ -137,7 +136,13 @@ export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
       defaultValue: defaultQuery,
       onChange: onQueryChange,
     });
-    const labels = { ...defaultStatusLabels, ...statusLabels };
+    const labels = {
+      idle: copy.idle,
+      unread: copy.unread,
+      streaming: copy.streaming,
+      error: copy.error,
+      ...statusLabels,
+    };
     const visibleConversations = useMemo(() => {
       const normalized = currentQuery.trim();
       if (!normalized) return conversations;
@@ -187,7 +192,7 @@ export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
         ref={ref}
         className={cx(componentClass, classNames?.root, className)}
         style={composeStyles(styles?.root, style)}
-        aria-label={ariaLabel}
+        aria-label={resolvedAriaLabel}
         data-slot="root"
       >
         {searchable || onCreate ? (
@@ -198,14 +203,14 @@ export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
           >
             {searchable ? (
               <label className="vl-conversation-list__search-wrap">
-                <span className="vl-sr-only">{searchLabel}</span>
+                <span className="vl-sr-only">{resolvedSearchLabel}</span>
                 <input
                   className={cx("vl-conversation-list__search", classNames?.search)}
                   style={styles?.search}
                   type="search"
                   value={currentQuery}
-                  placeholder={searchPlaceholder}
-                  aria-label={searchLabel}
+                  placeholder={resolvedSearchPlaceholder}
+                  aria-label={resolvedSearchLabel}
                   onChange={(event: ChangeEvent<HTMLInputElement>) =>
                     setCurrentQuery(event.currentTarget.value)
                   }
@@ -222,7 +227,7 @@ export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
                 style={styles?.createButton}
                 type="button"
                 onClick={onCreate}
-                aria-label={createLabel}
+                aria-label={resolvedCreateLabel}
                 data-slot="createButton"
               >
                 <span aria-hidden="true">+</span>
@@ -236,7 +241,7 @@ export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
             style={styles?.empty}
             data-slot="empty"
           >
-            {conversations.length === 0 ? empty : noResults}
+            {conversations.length === 0 ? resolvedEmpty : resolvedNoResults}
           </div>
         ) : (
           <ul
@@ -310,7 +315,7 @@ export const ConversationList = forwardRef<HTMLElement, ConversationListProps>(
                           style={styles?.title}
                           data-slot="title"
                         >
-                          {getTitle(conversation)}
+                          {resolvedGetTitle(conversation)}
                         </span>
                         {getDescription ? (
                           <span

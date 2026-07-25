@@ -17,7 +17,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { CodeBlock, type CodeBlockProps, type CodeHighlighter } from "./CodeBlock";
 import { MermaidDiagram, type SafeMermaidConfig } from "./MermaidDiagram";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import { cx } from "./utils";
 
 export interface MarkdownRendererProps
@@ -77,7 +77,7 @@ function MarkdownRendererInner(
     streaming = false,
     streamingMode = "deferred",
     stabilizeIncompleteBlocks = true,
-    streamingLabel = "Response is streaming",
+    streamingLabel,
     components,
     remarkPlugins,
     rehypePlugins,
@@ -97,6 +97,9 @@ function MarkdownRendererInner(
   ref: React.ForwardedRef<HTMLDivElement>,
 ) {
   const componentClass = useComponentClass("markdown");
+  const { messages } = useVelora();
+  const resolvedStreamingLabel =
+    streamingLabel ?? messages.markdownRenderer.streaming;
   const deferredContent = useDeferredValue(content);
   const candidateContent =
     streaming && streamingMode === "deferred" ? deferredContent : content;
@@ -200,7 +203,9 @@ function MarkdownRendererInner(
       {streaming ? (
         <>
           <span className="vl-markdown__cursor" aria-hidden="true" />
-          <span className="vl-sr-only" role="status">{streamingLabel}</span>
+          <span className="vl-sr-only" role="status">
+            {resolvedStreamingLabel}
+          </span>
         </>
       ) : null}
     </div>

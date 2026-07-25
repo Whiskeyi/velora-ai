@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { StreamingIndicator } from "./StreamingIndicator";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import {
   composeStyles,
   cx,
@@ -62,13 +62,6 @@ export interface ReasoningPanelProps extends Omit<
   styles?: SemanticStyles<ReasoningPanelSlot>;
 }
 
-const defaultStatusLabels: Record<ReasoningPanelStatus, string> = {
-  idle: "Reasoning is idle",
-  running: "Reasoning is in progress",
-  complete: "Reasoning is complete",
-  error: "Reasoning failed",
-};
-
 function defaultFormatElapsed(elapsedMs: number): string {
   const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1_000));
   const minutes = Math.floor(totalSeconds / 60);
@@ -79,7 +72,7 @@ function defaultFormatElapsed(elapsedMs: number): string {
 export const ReasoningPanel = forwardRef<HTMLElement, ReasoningPanelProps>(function ReasoningPanel(
   {
     children,
-    title = "Reasoning",
+    title,
     description,
     status = "complete",
     open,
@@ -93,7 +86,7 @@ export const ReasoningPanel = forwardRef<HTMLElement, ReasoningPanelProps>(funct
     showElapsed = true,
     elapsedUpdateInterval = 1_000,
     formatElapsed = defaultFormatElapsed,
-    runningLabel = "Thinking",
+    runningLabel,
     statusLabels,
     className,
     style,
@@ -104,6 +97,10 @@ export const ReasoningPanel = forwardRef<HTMLElement, ReasoningPanelProps>(funct
   ref,
 ) {
   const componentClass = useComponentClass("reasoning-panel");
+  const { messages } = useVelora();
+  const copy = messages.reasoningPanel;
+  const resolvedTitle = title ?? copy.title;
+  const resolvedRunningLabel = runningLabel ?? copy.thinking;
   const [expanded, setExpanded] = useControllableState({
     value: open,
     defaultValue: defaultOpen,
@@ -167,7 +164,13 @@ export const ReasoningPanel = forwardRef<HTMLElement, ReasoningPanelProps>(funct
   const elapsedContent =
     showElapsed && effectiveElapsed !== undefined ? formatElapsed(effectiveElapsed, status) : null;
   const metaContent = duration ?? elapsedContent;
-  const resolvedStatusLabels = { ...defaultStatusLabels, ...statusLabels };
+  const resolvedStatusLabels = {
+    idle: copy.idle,
+    running: copy.running,
+    complete: copy.complete,
+    error: copy.error,
+    ...statusLabels,
+  };
   const isOpen = !collapsible || expanded;
   const toggle = () => {
     manualOpenRef.current = true;
@@ -198,7 +201,7 @@ export const ReasoningPanel = forwardRef<HTMLElement, ReasoningPanelProps>(funct
           style={styles?.title}
           data-slot="title"
         >
-          {title}
+          {resolvedTitle}
         </span>
         {description != null ? (
           <span
@@ -216,7 +219,12 @@ export const ReasoningPanel = forwardRef<HTMLElement, ReasoningPanelProps>(funct
         data-slot="meta"
       >
         {status === "running" ? (
-          <StreamingIndicator label={runningLabel} size="small" visibleLabel announce={false} />
+          <StreamingIndicator
+            label={resolvedRunningLabel}
+            size="small"
+            visibleLabel
+            announce={false}
+          />
         ) : null}
         {metaContent != null ? (
           <span
@@ -286,7 +294,7 @@ export const ReasoningPanel = forwardRef<HTMLElement, ReasoningPanelProps>(funct
           style={styles?.content}
           data-slot="content"
           role="region"
-          aria-label={typeof title === "string" ? title : "Reasoning details"}
+          aria-label={typeof resolvedTitle === "string" ? resolvedTitle : copy.details}
         >
           {children}
         </div>

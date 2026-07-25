@@ -121,6 +121,13 @@ export {
   type VeloraTheme,
   type VeloraTokens,
 } from "./VeloraProvider";
+export {
+  enUS,
+  zhCN,
+  type VeloraLocale,
+  type VeloraMessages,
+  type VeloraMessagesOverride,
+} from "./locale";
 export type { SemanticClassNames, SemanticStyles } from "./utils";
 export {
   usePromptDrafts,

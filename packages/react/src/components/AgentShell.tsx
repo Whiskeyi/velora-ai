@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import {
   composeStyles,
   cx,
@@ -85,8 +85,8 @@ export const AgentShell = forwardRef<HTMLDivElement, AgentShellProps>(function A
     composer,
     inspector,
     overlay,
-    sidebarLabel = "Conversations",
-    inspectorLabel = "Inspector",
+    sidebarLabel,
+    inspectorLabel,
     mobileSidebarOpen,
     defaultMobileSidebarOpen = false,
     onMobileSidebarOpenChange,
@@ -95,11 +95,11 @@ export const AgentShell = forwardRef<HTMLDivElement, AgentShellProps>(function A
     onMobileInspectorOpenChange,
     sidebarToggleIcon,
     inspectorToggleIcon,
-    openSidebarLabel = "Open conversations",
-    closeSidebarLabel = "Close conversations",
-    openInspectorLabel = "Open inspector",
-    closeInspectorLabel = "Close inspector",
-    closePanelsLabel = "Close open panel",
+    openSidebarLabel,
+    closeSidebarLabel,
+    openInspectorLabel,
+    closeInspectorLabel,
+    closePanelsLabel,
     contentRole,
     onKeyDown,
     className,
@@ -111,6 +111,16 @@ export const AgentShell = forwardRef<HTMLDivElement, AgentShellProps>(function A
   ref,
 ) {
   const rootClass = useComponentClass("agent-shell");
+  const { messages } = useVelora();
+  const labels = {
+    sidebar: sidebarLabel ?? messages.agentShell.sidebarLabel,
+    inspector: inspectorLabel ?? messages.agentShell.inspectorLabel,
+    openSidebar: openSidebarLabel ?? messages.agentShell.openSidebarLabel,
+    closeSidebar: closeSidebarLabel ?? messages.agentShell.closeSidebarLabel,
+    openInspector: openInspectorLabel ?? messages.agentShell.openInspectorLabel,
+    closeInspector: closeInspectorLabel ?? messages.agentShell.closeInspectorLabel,
+    closePanels: closePanelsLabel ?? messages.agentShell.closePanelsLabel,
+  };
   const generatedId = useId().replace(/:/g, "");
   const sidebarId = `vl-agent-shell-${generatedId}-sidebar`;
   const inspectorId = `vl-agent-shell-${generatedId}-inspector`;
@@ -240,7 +250,7 @@ export const AgentShell = forwardRef<HTMLDivElement, AgentShellProps>(function A
           id={sidebarId}
           className={cx("vl-agent-shell__sidebar", classNames?.sidebar)}
           style={styles?.sidebar}
-          aria-label={sidebarLabel}
+          aria-label={labels.sidebar}
           aria-modal={modalPanel === "sidebar" || undefined}
           role={modalPanel === "sidebar" ? "dialog" : undefined}
           tabIndex={modalPanel === "sidebar" ? -1 : undefined}
@@ -280,7 +290,7 @@ export const AgentShell = forwardRef<HTMLDivElement, AgentShellProps>(function A
                   type="button"
                   aria-controls={sidebarId}
                   aria-expanded={sidebarOpen}
-                  aria-label={sidebarOpen ? closeSidebarLabel : openSidebarLabel}
+                  aria-label={sidebarOpen ? labels.closeSidebar : labels.openSidebar}
                   onClick={toggleSidebar}
                   data-panel="sidebar"
                   data-slot="sidebarToggle"
@@ -298,7 +308,7 @@ export const AgentShell = forwardRef<HTMLDivElement, AgentShellProps>(function A
                   type="button"
                   aria-controls={inspectorId}
                   aria-expanded={inspectorOpen}
-                  aria-label={inspectorOpen ? closeInspectorLabel : openInspectorLabel}
+                  aria-label={inspectorOpen ? labels.closeInspector : labels.openInspector}
                   onClick={toggleInspector}
                   data-panel="inspector"
                   data-slot="inspectorToggle"
@@ -340,7 +350,7 @@ export const AgentShell = forwardRef<HTMLDivElement, AgentShellProps>(function A
           id={inspectorId}
           className={cx("vl-agent-shell__inspector", classNames?.inspector)}
           style={styles?.inspector}
-          aria-label={inspectorLabel}
+          aria-label={labels.inspector}
           aria-modal={modalPanel === "inspector" || undefined}
           role={modalPanel === "inspector" ? "dialog" : undefined}
           tabIndex={modalPanel === "inspector" ? -1 : undefined}
@@ -370,7 +380,7 @@ export const AgentShell = forwardRef<HTMLDivElement, AgentShellProps>(function A
           className={cx("vl-agent-shell__backdrop", classNames?.backdrop)}
           style={styles?.backdrop}
           type="button"
-          aria-label={closePanelsLabel}
+          aria-label={labels.closePanels}
           aria-hidden={modalOpen ? undefined : true}
           onClick={closePanels}
           tabIndex={modalOpen ? 0 : -1}

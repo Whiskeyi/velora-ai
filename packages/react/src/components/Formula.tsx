@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import { cx, errorMessage } from "./utils";
 
 export interface FormulaProps
@@ -33,8 +33,8 @@ export const Formula = forwardRef<HTMLSpanElement, FormulaProps>(function Formul
     options,
     renderError,
     showCopy = false,
-    copyLabel = "Copy formula",
-    copiedLabel = "Copied",
+    copyLabel,
+    copiedLabel,
     onCopy,
     className,
     ...rest
@@ -42,6 +42,9 @@ export const Formula = forwardRef<HTMLSpanElement, FormulaProps>(function Formul
   ref,
 ) {
   const componentClass = useComponentClass("formula");
+  const { messages } = useVelora();
+  const resolvedCopyLabel = copyLabel ?? messages.formula.copy;
+  const resolvedCopiedLabel = copiedLabel ?? messages.formula.copied;
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rendered = useMemo(() => {
@@ -108,9 +111,9 @@ export const Formula = forwardRef<HTMLSpanElement, FormulaProps>(function Formul
           className="vl-formula__copy"
           type="button"
           onClick={copyFormula}
-          aria-label={copyLabel}
+          aria-label={resolvedCopyLabel}
         >
-          {copied ? copiedLabel : copyLabel}
+          {copied ? resolvedCopiedLabel : resolvedCopyLabel}
         </button>
       ) : null}
     </span>

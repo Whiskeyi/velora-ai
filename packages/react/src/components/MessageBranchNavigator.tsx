@@ -5,7 +5,7 @@ import {
   type ReactNode,
   useEffect,
 } from "react";
-import { useComponentClass } from "./VeloraProvider";
+import { useComponentClass, useVelora } from "./VeloraProvider";
 import {
   composeStyles,
   cx,
@@ -51,9 +51,9 @@ export const MessageBranchNavigator = forwardRef<HTMLDivElement, MessageBranchNa
       defaultIndex = 0,
       onIndexChange,
       disabled = false,
-      ariaLabel = "Response versions",
-      previousLabel = "Previous response version",
-      nextLabel = "Next response version",
+      ariaLabel,
+      previousLabel,
+      nextLabel,
       formatCount = (activeIndex, total) =>
         total === 0 ? "0 / 0" : `${activeIndex + 1} / ${total}`,
       previousIcon,
@@ -69,6 +69,11 @@ export const MessageBranchNavigator = forwardRef<HTMLDivElement, MessageBranchNa
     ref,
   ) {
     const componentClass = useComponentClass("message-branch-navigator");
+    const { messages } = useVelora();
+    const copy = messages.messageBranchNavigator;
+    const resolvedAriaLabel = ariaLabel ?? copy.ariaLabel;
+    const resolvedPreviousLabel = previousLabel ?? copy.previous;
+    const resolvedNextLabel = nextLabel ?? copy.next;
     const normalizedCount = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
     const [selectedIndex, setSelectedIndex] = useControllableState({
       value: index,
@@ -118,7 +123,7 @@ export const MessageBranchNavigator = forwardRef<HTMLDivElement, MessageBranchNa
         className={cx(componentClass, classNames?.root, className)}
         style={composeStyles(styles?.root, style)}
         role="group"
-        aria-label={ariaLabel}
+        aria-label={resolvedAriaLabel}
         aria-disabled={disabled || normalizedCount === 0 || undefined}
         data-index={activeIndex}
         data-count={normalizedCount}
@@ -133,7 +138,7 @@ export const MessageBranchNavigator = forwardRef<HTMLDivElement, MessageBranchNa
           )}
           style={composeStyles(styles?.button, styles?.previous)}
           type="button"
-          aria-label={previousLabel}
+          aria-label={resolvedPreviousLabel}
           disabled={!canGoPrevious}
           data-action="previous"
           onClick={() => moveTo(activeIndex - 1)}
@@ -162,7 +167,7 @@ export const MessageBranchNavigator = forwardRef<HTMLDivElement, MessageBranchNa
           )}
           style={composeStyles(styles?.button, styles?.next)}
           type="button"
-          aria-label={nextLabel}
+          aria-label={resolvedNextLabel}
           disabled={!canGoNext}
           data-action="next"
           onClick={() => moveTo(activeIndex + 1)}

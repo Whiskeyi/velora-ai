@@ -102,7 +102,7 @@ export function Chat() {
   };
 
   return (
-    <VeloraProvider theme="system">
+    <VeloraProvider theme="system" locale="zh-CN">
       <MessageList
         messages={chat.messages}
         renderMessage={(message) => (
@@ -130,6 +130,12 @@ export function Chat() {
   );
 }
 ```
+
+`VeloraProvider` provides component-level internationalization as well as design
+tokens. Set `locale="en-US"` or `locale="zh-CN"` once for built-in labels,
+screen-reader announcements, placeholders, and action names. Use the typed
+`messages` prop for product-specific partial overrides without copying the full
+catalog.
 
 Do not hold the composer submission open for the whole stream. `runStatus` is the source of truth for the stop button and generation state; `messages` is the source of truth for streamed output. `chat.stop()` synchronously aborts the active transport and returns whether a run was stopped. An application with a remote cancellation handshake can temporarily pass `runStatus="stopping"` while that handshake settles.
 
