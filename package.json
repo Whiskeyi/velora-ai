@@ -54,23 +54,23 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.37.1",
+    "@cloudflare/vite-plugin": "1.47.0",
     "@playwright/test": "^1.62.0",
     "@types/katex": "^0.16.7",
-    "@types/node": "22.19.19",
+    "@types/node": "26.1.1",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "6.0.2",
-    "@vitejs/plugin-rsc": "0.5.26",
-    "@voidzero-dev/vite-plus-core": "0.2.5",
+    "@vitejs/plugin-react": "6.0.4",
+    "@vitejs/plugin-rsc": "0.5.30",
+    "@voidzero-dev/vite-plus-core": "0.2.6",
     "jsdom": "^29.1.1",
-    "react-server-dom-webpack": "19.2.6",
-    "typescript": "5.9.3",
-    "vinext": "0.0.50",
+    "react-server-dom-webpack": "19.2.8",
+    "typescript": "7.0.2",
+    "vinext": "0.2.1",
     "vite": "npm:@voidzero-dev/vite-plus-core@0.2.5",
-    "vite-plus": "0.2.5",
+    "vite-plus": "0.2.6",
     "vitest": "4.1.10",
-    "wrangler": "4.92.0"
+    "wrangler": "4.114.0"
   },
   "overrides": {
     "vite": "npm:@voidzero-dev/vite-plus-core@0.2.5",
