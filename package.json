@@ -8,7 +8,7 @@
     "type": "git",
     "url": "git+https://github.com/Whiskeyi/velora-ai.git"
   },
-  "homepage": "https://velora-ai-components.zhuchjie.chatgpt.site/",
+  "homepage": "https://whiskeyi.github.io/velora-ai/",
   "bugs": {
     "url": "https://github.com/Whiskeyi/velora-ai/issues"
   },
@@ -23,6 +23,7 @@
   "scripts": {
     "dev": "vp dev",
     "build": "vp build",
+    "build:pages": "vp build --config vite.pages.config.ts",
     "build:library": "vp pack",
     "build:all": "vp pack && vp build",
     "preview": "vp preview",

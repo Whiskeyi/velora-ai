@@ -18,6 +18,7 @@ import {
   ToolCallCard,
   VeloraProvider,
   createAgentStore,
+  createMockTransport,
   createSSETransport,
   useAgentChat,
   usePromptDrafts,
@@ -2939,8 +2940,68 @@ function BrandMark() {
   );
 }
 
+function createDemoTransport() {
+  const isStaticDemo =
+    typeof document !== "undefined" &&
+    document.documentElement.dataset.veloraDemoTransport === "mock";
+
+  if (!isStaticDemo) {
+    return createSSETransport({ url: "/api/demo/stream" });
+  }
+
+  return createMockTransport({
+    initialDelayMs: 120,
+    chunkSize: [2, 4, 3, 5],
+    reasoningChunkSize: [10, 14, 8],
+    delayMs: ({ event }) => {
+      if (event.type === "text-delta") return 20;
+      if (event.type === "reasoning-delta") return 72;
+      if (event.type === "step") return 90;
+      return 36;
+    },
+    response: ({ lastUserMessage }) => {
+      const subject =
+        lastUserMessage?.content.trim().slice(0, 120) || "this interface request";
+      const completedAt = Date.now();
+
+      return {
+        content: [
+          `I mapped “${subject}” into a focused agent surface.`,
+          "\n\n**Recommended direction**\n\n",
+          "1. Keep one calm primary action.\n",
+          "2. Reveal tool progress only when it builds trust.\n",
+          "3. Preserve reading position while tokens arrive.\n\n",
+          "```tsx\n<AgentShell composer={<PromptComposer onSubmit={send} />} />\n```\n\n",
+          "This GitHub Pages demo uses Velora’s deterministic mock transport. Swap it for the SSE adapter without changing the component tree.",
+        ].join(""),
+        reasoning:
+          "Inspecting the interaction goal. Balancing disclosure, continuity, and motion. Preparing the smallest complete interface plan.",
+        steps: [
+          {
+            id: "intent",
+            title: "Understand intent",
+            status: "complete",
+            description: "Mapped the request to interaction primitives",
+            startedAt: completedAt - 420,
+            completedAt: completedAt - 180,
+          },
+          {
+            id: "compose",
+            title: "Compose response",
+            status: "complete",
+            description: "Streamed the response through the typed runtime",
+            startedAt: completedAt - 170,
+            completedAt,
+          },
+        ],
+        metadata: { adapter: "velora-demo-mock" },
+      };
+    },
+  });
+}
+
 function useDemoAgent(conversationId: string) {
-  const transport = useMemo(() => createSSETransport({ url: "/api/demo/stream" }), []);
+  const transport = useMemo(createDemoTransport, []);
   const storeRef = useRef<ReturnType<typeof createAgentStore> | null>(null);
   if (!storeRef.current) {
     storeRef.current = createAgentStore({

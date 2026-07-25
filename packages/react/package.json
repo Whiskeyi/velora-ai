@@ -9,7 +9,7 @@
     "url": "git+https://github.com/Whiskeyi/velora-ai.git",
     "directory": "packages/react"
   },
-  "homepage": "https://velora-ai-components.zhuchjie.chatgpt.site/",
+  "homepage": "https://whiskeyi.github.io/velora-ai/",
   "bugs": {
     "url": "https://github.com/Whiskeyi/velora-ai/issues"
   },

@@ -1,6 +1,7 @@
 # Velora AI
 
 [![CI](https://github.com/Whiskeyi/velora-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Whiskeyi/velora-ai/actions/workflows/ci.yml)
+[![GitHub Pages](https://github.com/Whiskeyi/velora-ai/actions/workflows/pages.yml/badge.svg)](https://github.com/Whiskeyi/velora-ai/actions/workflows/pages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-6d5dfc.svg)](LICENSE)
 
 Streaming-first React primitives for real AI and agent interfaces.
@@ -9,7 +10,7 @@ Velora is a component library rather than a fixed chat template. It separates a 
 
 The repository contains the publishable `@velora-ai/react` package and a live-editable component workbench.
 
-[Explore the live component workbench](https://velora-ai-components.zhuchjie.chatgpt.site/) · [Read the package API guide](packages/react/README.md)
+[Explore the live component workbench](https://whiskeyi.github.io/velora-ai/) · [Read the package API guide](packages/react/README.md)
 
 The documentation site now separates the live component workbench from a component API reference. Use the workbench to edit and re-render examples, then use the API section to inspect props, defaults, interaction contracts, and integration notes by component category.
 
@@ -50,6 +51,16 @@ vp dev
 ```
 
 Open `http://localhost:3000`. The main demo uses `/api/demo/stream`, a real `text/event-stream` route. Every component example can be edited and recompiled in place.
+
+## GitHub Pages
+
+The repository deploys the component workbench from `main` with the official GitHub Pages Actions flow. The Pages build uses Vite+ with relative asset paths so it remains valid under the `/velora-ai/` project subpath.
+
+```bash
+npm run build:pages
+```
+
+The static build is written to `dist-pages/`. Because GitHub Pages cannot host the server-side SSE route, that deployment switches the showcase to Velora's deterministic mock transport while preserving the same typed runtime, incremental tokens, reasoning, steps, stop, and retry behavior. Product integrations should continue to use `createSSETransport`.
 
 ## Package quick start
 
