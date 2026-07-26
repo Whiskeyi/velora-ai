@@ -12,13 +12,30 @@ import {
 } from "react";
 import { StreamingIndicator } from "./StreamingIndicator";
 import { useComponentClass, useVelora } from "./VeloraProvider";
-import { assignRef, cx, errorMessage, useControllableState } from "./utils";
+import {
+  assignRef,
+  composeStyles,
+  cx,
+  errorMessage,
+  type SemanticClassNames,
+  type SemanticStyles,
+  useControllableState,
+  writeClipboard,
+} from "./utils";
 
 export type SafeMermaidConfig = Omit<
   MermaidConfig,
   "securityLevel" | "startOnLoad" | "suppressErrorRendering"
 >;
 export type MermaidAlignment = "start" | "center" | "end";
+export type MermaidDiagramSlot =
+  | "root"
+  | "title"
+  | "loading"
+  | "error"
+  | "controls"
+  | "viewport"
+  | "canvas";
 
 let mermaidModule: Promise<typeof import("mermaid")> | undefined;
 let renderQueue: Promise<unknown> = Promise.resolve();
@@ -108,6 +125,8 @@ export interface MermaidDiagramProps
   copySourceLabel?: string;
   copiedSourceLabel?: string;
   onCopySource?: (chart: string, success: boolean) => void;
+  classNames?: SemanticClassNames<MermaidDiagramSlot>;
+  styles?: SemanticStyles<MermaidDiagramSlot>;
 }
 
 export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
@@ -137,6 +156,9 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
       copiedSourceLabel,
       onCopySource,
       className,
+      style,
+      classNames,
+      styles,
       ...rest
     },
     forwardedRef,
@@ -234,8 +256,7 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
     const copySource = async () => {
       let success = false;
       try {
-        if (!navigator.clipboard?.writeText) throw new Error("Clipboard is unavailable");
-        await navigator.clipboard.writeText(chart);
+        await writeClipboard(chart);
         success = true;
         setCopied(true);
         if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
@@ -257,21 +278,41 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
           rootRef.current = node;
           assignRef(forwardedRef, node);
         }}
-        className={cx(componentClass, className)}
+        className={cx(componentClass, classNames?.root, className)}
+        style={composeStyles(styles?.root, style)}
+        data-slot="root"
         aria-busy={pending || undefined}
         data-state={pending ? "loading" : error ? "error" : "ready"}
         data-align={align}
       >
-        {title != null ? <div className="vl-mermaid__title">{title}</div> : null}
+        {title != null ? (
+          <div
+            className={cx("vl-mermaid__title", classNames?.title)}
+            style={styles?.title}
+            data-slot="title"
+          >
+            {title}
+          </div>
+        ) : null}
         {pending ? (
-          <div className="vl-mermaid__loading" role="status">
+          <div
+            className={cx("vl-mermaid__loading", classNames?.loading)}
+            style={styles?.loading}
+            data-slot="loading"
+            role="status"
+          >
             {loading ?? (
               <StreamingIndicator label={copy.rendering} visibleLabel />
             )}
           </div>
         ) : null}
         {error ? (
-          <div className="vl-mermaid__error" role="alert">
+          <div
+            className={cx("vl-mermaid__error", classNames?.error)}
+            style={styles?.error}
+            data-slot="error"
+            role="alert"
+          >
             {renderError?.(error, retry) ?? (
               <>
                 <span id={errorId}>{error.message}</span>
@@ -286,7 +327,9 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
           <>
             {interactive || showCopySource ? (
               <div
-                className="vl-mermaid__controls"
+                className={cx("vl-mermaid__controls", classNames?.controls)}
+                style={styles?.controls}
+                data-slot="controls"
                 role="toolbar"
                 aria-label={resolvedControlsLabel}
               >
@@ -325,10 +368,15 @@ export const MermaidDiagram = forwardRef<HTMLDivElement, MermaidDiagramProps>(
                 ) : null}
               </div>
             ) : null}
-            <div className="vl-mermaid__viewport">
+            <div
+              className={cx("vl-mermaid__viewport", classNames?.viewport)}
+              style={styles?.viewport}
+              data-slot="viewport"
+            >
               <div
-                className="vl-mermaid__canvas"
-                style={canvasStyle}
+                className={cx("vl-mermaid__canvas", classNames?.canvas)}
+                style={{ ...canvasStyle, ...styles?.canvas }}
+                data-slot="canvas"
                 role="img"
                 aria-label={typeof title === "string" ? title : copy.diagram}
                 dangerouslySetInnerHTML={{ __html: result.svg }}

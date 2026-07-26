@@ -285,6 +285,11 @@ export const AgentSteps = forwardRef<HTMLOListElement, AgentStepsProps>(function
     });
     return durations;
   }, [now, steps]);
+  const liveStep = [...steps]
+    .reverse()
+    .find((step) =>
+      ["running", "complete", "error", "cancelled"].includes(step.status),
+    );
 
   const toggleStep = (stepId: string, status: AgentStepsStatus) => {
     manualStatusRef.current.set(stepId, status);
@@ -345,14 +350,15 @@ export const AgentSteps = forwardRef<HTMLOListElement, AgentStepsProps>(function
   }
 
   return (
-    <ol
-      {...rest}
-      ref={ref}
-      className={cx(componentClass, classNames?.root, className)}
-      style={composeStyles(styles?.root, style)}
-      data-slot="root"
-      aria-busy={retryingIds.size > 0 || undefined}
-    >
+    <>
+      <ol
+        {...rest}
+        ref={ref}
+        className={cx(componentClass, classNames?.root, className)}
+        style={composeStyles(styles?.root, style)}
+        data-slot="root"
+        aria-busy={retryingIds.size > 0 || undefined}
+      >
       {steps.map((step, index) => {
         const status = step.status as AgentStepsStatus;
         const duration = durationById.get(step.id);
@@ -404,8 +410,6 @@ export const AgentSteps = forwardRef<HTMLOListElement, AgentStepsProps>(function
               className={cx("vl-agent-steps__status", classNames?.status)}
               style={styles?.status}
               data-slot="status"
-              role="status"
-              aria-live="polite"
             >
               {labels[status]}
             </span>
@@ -530,7 +534,13 @@ export const AgentSteps = forwardRef<HTMLOListElement, AgentStepsProps>(function
             </div>
           </li>
         );
-      })}
-    </ol>
+        })}
+      </ol>
+      <span className="vl-sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {liveStep
+          ? `${liveStep.title}: ${copy[liveStep.status]}`
+          : undefined}
+      </span>
+    </>
   );
 });

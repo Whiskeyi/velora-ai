@@ -38,6 +38,26 @@
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
+    "./components": {
+      "types": "./dist/components-entry.d.mts",
+      "import": "./dist/components-entry.mjs"
+    },
+    "./runtime": {
+      "types": "./dist/runtime-entry.d.mts",
+      "import": "./dist/runtime-entry.mjs"
+    },
+    "./transport": {
+      "types": "./dist/transport-entry.d.mts",
+      "import": "./dist/transport-entry.mjs"
+    },
+    "./hooks": {
+      "types": "./dist/hooks-entry.d.mts",
+      "import": "./dist/hooks-entry.mjs"
+    },
+    "./rich-content": {
+      "types": "./dist/rich-content-entry.d.mts",
+      "import": "./dist/rich-content-entry.mjs"
+    },
     "./styles.css": "./dist/style.css"
   },
   "publishConfig": {

@@ -6,6 +6,13 @@ const entryUrl = new URL("dist/index.mjs", packageRoot);
 const declarationUrl = new URL("dist/index.d.mts", packageRoot);
 const styleUrl = new URL("dist/style.css", packageRoot);
 const manifestUrl = new URL("package.json", packageRoot);
+const subpathEntries = [
+  ["./components", "components-entry.mjs", true],
+  ["./runtime", "runtime-entry.mjs", false],
+  ["./transport", "transport-entry.mjs", false],
+  ["./hooks", "hooks-entry.mjs", true],
+  ["./rich-content", "rich-content-entry.mjs", true],
+];
 
 const [entry, declarations, style, manifestSource] = await Promise.all([
   readFile(entryUrl, "utf8"),
@@ -19,10 +26,24 @@ if (!entry.startsWith('"use client";')) {
   throw new Error("Package entry is missing the React client directive");
 }
 
+for (const [subpath, filename, client] of subpathEntries) {
+  const source = await readFile(new URL(`dist/${filename}`, packageRoot), "utf8");
+  if (client !== source.startsWith('"use client";')) {
+    throw new Error(
+      `${subpath} ${client ? "must" : "must not"} carry the React client directive`,
+    );
+  }
+  if (manifest.exports?.[subpath]?.import !== `./dist/${filename}`) {
+    throw new Error(`Package manifest is missing the ${subpath} export`);
+  }
+}
+
 const requiredDeclarationTypes = [
   "AgentRunOutcome",
   "PromptDraft",
   "SafeMermaidConfig",
+  "SafeKatexOptions",
+  "AgentToolCall",
   "ToolCallCardProps",
 ];
 

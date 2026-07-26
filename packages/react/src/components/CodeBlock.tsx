@@ -3,12 +3,33 @@ import {
   type HTMLAttributes,
   type ReactNode,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
 } from "react";
 import { useComponentClass, useVelora } from "./VeloraProvider";
-import { cx, errorMessage, useControllableState } from "./utils";
+import {
+  composeStyles,
+  cx,
+  errorMessage,
+  type SemanticClassNames,
+  type SemanticStyles,
+  useControllableState,
+  writeClipboard,
+} from "./utils";
+
+export type CodeBlockSlot =
+  | "root"
+  | "toolbar"
+  | "identity"
+  | "filename"
+  | "language"
+  | "actions"
+  | "action"
+  | "pre"
+  | "expand"
+  | "status";
 
 export interface TrustedHighlightedCode {
   /** Trusted HTML produced by the consumer-supplied syntax highlighter. */
@@ -56,6 +77,8 @@ export interface CodeBlockProps
   actions?: ReactNode;
   retryHighlightLabel?: string;
   onHighlightError?: (error: unknown) => void;
+  classNames?: SemanticClassNames<CodeBlockSlot>;
+  styles?: SemanticStyles<CodeBlockSlot>;
 }
 
 function isTrustedHtml(value: CodeHighlightResult): value is TrustedHighlightedCode {
@@ -66,24 +89,6 @@ function isTrustedHtml(value: CodeHighlightResult): value is TrustedHighlightedC
       "html" in value &&
       typeof (value as TrustedHighlightedCode).html === "string",
   );
-}
-
-async function writeClipboard(value: string): Promise<void> {
-  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(value);
-    return;
-  }
-
-  if (typeof document === "undefined") throw new Error("Clipboard is unavailable");
-  const textarea = document.createElement("textarea");
-  textarea.value = value;
-  textarea.style.position = "fixed";
-  textarea.style.opacity = "0";
-  document.body.appendChild(textarea);
-  textarea.select();
-  const copied = document.execCommand("copy");
-  textarea.remove();
-  if (!copied) throw new Error("Clipboard write failed");
 }
 
 export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function CodeBlock(
@@ -117,6 +122,9 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
     retryHighlightLabel,
     onHighlightError,
     className,
+    style,
+    classNames,
+    styles,
     ...rest
   },
   ref,
@@ -132,7 +140,10 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
   const resolvedCollapseLabel = collapseLabel ?? copy.collapse;
   const resolvedDownloadLabel = downloadLabel ?? copy.download;
   const resolvedRetryHighlightLabel = retryHighlightLabel ?? copy.retryHighlight;
-  const [highlighted, setHighlighted] = useState<CodeHighlightResult | null>(null);
+  const [highlighted, setHighlighted] = useState<{
+    signature: string;
+    result: CodeHighlightResult;
+  } | null>(null);
   const [highlightError, setHighlightError] = useState<string | null>(null);
   const [highlighting, setHighlighting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -148,6 +159,7 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
     onChange: onCollapsedChange,
   });
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const contentId = `vl-code-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const onHighlightErrorRef = useRef(onHighlightError);
   onHighlightErrorRef.current = onHighlightError;
   const lineCount = useMemo(
@@ -155,6 +167,15 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
     [code],
   );
   const canCollapse = collapsible && lineCount > Math.max(1, collapseAfterLines);
+  const sourceSignature = `${language ?? ""}\u0000${code}`;
+  const visiblyCollapsed = canCollapse && isCollapsed;
+  const visibleCode = visiblyCollapsed
+    ? `${code.split("\n").slice(0, Math.max(1, collapseAfterLines)).join("\n")}\n…`
+    : code;
+  const currentHighlight =
+    !visiblyCollapsed && highlighted?.signature === sourceSignature
+      ? highlighted.result
+      : null;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -170,7 +191,7 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
       .then(() => highlighter(code, language, { signal: controller.signal }))
       .then((result) => {
         if (controller.signal.aborted) return;
-        setHighlighted(result);
+        setHighlighted({ signature: sourceSignature, result });
         setHighlighting(false);
       })
       .catch((error: unknown) => {
@@ -181,7 +202,7 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
       });
 
     return () => controller.abort();
-  }, [code, highlighter, highlightAttempt, language]);
+  }, [code, highlighter, highlightAttempt, language, sourceSignature]);
 
   useEffect(
     () => () => {
@@ -225,23 +246,54 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
     <div
       {...rest}
       ref={ref}
-      className={cx(componentClass, className)}
+      className={cx(componentClass, classNames?.root, className)}
+      style={composeStyles(styles?.root, style)}
+      data-slot="root"
       data-language={language}
       data-wrap={lineWrap ? "true" : "false"}
       data-collapsed={canCollapse && isCollapsed ? "true" : "false"}
       data-highlighting={highlighting ? "true" : "false"}
       aria-busy={highlighting || undefined}
     >
-      <div className="vl-code-block__toolbar">
-        <div className="vl-code-block__identity">
-          {filename != null ? <span className="vl-code-block__filename">{filename}</span> : null}
-          {language ? <span className="vl-code-block__language">{language}</span> : null}
+      <div
+        className={cx("vl-code-block__toolbar", classNames?.toolbar)}
+        style={styles?.toolbar}
+        data-slot="toolbar"
+      >
+        <div
+          className={cx("vl-code-block__identity", classNames?.identity)}
+          style={styles?.identity}
+          data-slot="identity"
+        >
+          {filename != null ? (
+            <span
+              className={cx("vl-code-block__filename", classNames?.filename)}
+              style={styles?.filename}
+              data-slot="filename"
+            >
+              {filename}
+            </span>
+          ) : null}
+          {language ? (
+            <span
+              className={cx("vl-code-block__language", classNames?.language)}
+              style={styles?.language}
+              data-slot="language"
+            >
+              {language}
+            </span>
+          ) : null}
         </div>
-        <div className="vl-code-block__actions">
+        <div
+          className={cx("vl-code-block__actions", classNames?.actions)}
+          style={styles?.actions}
+          data-slot="actions"
+        >
           {actions}
           {highlightError && highlighter ? (
             <button
-              className="vl-code-block__action"
+              className={cx("vl-code-block__action", classNames?.action)}
+              style={styles?.action}
               type="button"
               onClick={() => setHighlightAttempt((current) => current + 1)}
             >
@@ -250,7 +302,8 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
           ) : null}
           {showWrapToggle ? (
             <button
-              className="vl-code-block__action"
+              className={cx("vl-code-block__action", classNames?.action)}
+              style={styles?.action}
               type="button"
               aria-pressed={lineWrap}
               onClick={() => setLineWrap((current) => !current)}
@@ -260,7 +313,8 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
           ) : null}
           {showDownload ? (
             <button
-              className="vl-code-block__action"
+              className={cx("vl-code-block__action", classNames?.action)}
+              style={styles?.action}
               type="button"
               onClick={handleDownload}
             >
@@ -268,7 +322,12 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
             </button>
           ) : null}
           {showCopy ? (
-          <button className="vl-code-block__copy" type="button" onClick={handleCopy}>
+          <button
+            className={cx("vl-code-block__copy", classNames?.action)}
+            style={styles?.action}
+            type="button"
+            onClick={handleCopy}
+          >
             <svg viewBox="0 0 20 20" aria-hidden="true">
               <rect x="7" y="7" width="9" height="9" rx="2" />
               <path d="M13 7V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1" />
@@ -280,27 +339,41 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
           ) : null}
         </div>
       </div>
-      <pre className="vl-code-block__pre" tabIndex={0}>
-        {isTrustedHtml(highlighted) ? (
-          <code dangerouslySetInnerHTML={{ __html: highlighted.html }} />
-        ) : highlighted != null ? (
-          <code>{highlighted}</code>
+      <pre
+        id={contentId}
+        className={cx("vl-code-block__pre", classNames?.pre)}
+        style={styles?.pre}
+        data-slot="pre"
+        tabIndex={0}
+      >
+        {isTrustedHtml(currentHighlight) ? (
+          <code dangerouslySetInnerHTML={{ __html: currentHighlight.html }} />
+        ) : currentHighlight != null ? (
+          <code>{currentHighlight}</code>
         ) : (
-          <code>{code}</code>
+          <code>{visibleCode}</code>
         )}
       </pre>
       {canCollapse ? (
         <button
-          className="vl-code-block__expand"
+          className={cx("vl-code-block__expand", classNames?.expand)}
+          style={styles?.expand}
+          data-slot="expand"
           type="button"
           aria-expanded={!isCollapsed}
+          aria-controls={contentId}
           onClick={() => setIsCollapsed((current) => !current)}
         >
           {isCollapsed ? resolvedExpandLabel : resolvedCollapseLabel}
         </button>
       ) : null}
       {highlightError ? (
-        <span className="vl-sr-only" role="status">
+        <span
+          className={cx("vl-sr-only", classNames?.status)}
+          style={styles?.status}
+          data-slot="status"
+          role="status"
+        >
           {copy.highlightUnavailable(highlightError)}
         </span>
       ) : null}

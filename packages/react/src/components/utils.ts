@@ -144,6 +144,30 @@ export function errorMessage(error: unknown): string {
   return "An unexpected error occurred.";
 }
 
+/** Clipboard helper with a legacy DOM fallback for non-secure browser contexts. */
+export async function writeClipboard(value: string): Promise<void> {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+  if (
+    typeof document === "undefined" ||
+    typeof document.execCommand !== "function"
+  ) {
+    throw new Error("Clipboard is unavailable");
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  textarea.remove();
+  if (!copied) throw new Error("Clipboard write failed");
+}
+
 export function composeStyles(
   base: CSSProperties | undefined,
   override: CSSProperties | undefined,

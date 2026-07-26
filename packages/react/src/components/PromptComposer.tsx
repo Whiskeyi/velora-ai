@@ -227,10 +227,13 @@ function acceptsFile(file: File, accept: string | undefined): boolean {
   });
 }
 
-function formatFileSize(bytes: number): string {
+function formatFileSize(bytes: number, locale: string): string {
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const formatter = new Intl.NumberFormat(locale, {
+    maximumFractionDigits: bytes < 1024 * 1024 ? 0 : 1,
+  });
+  if (bytes < 1024 * 1024) return `${formatter.format(bytes / 1024)} KB`;
+  return `${formatter.format(bytes / (1024 * 1024))} MB`;
 }
 
 function normalizeCount(value: number, fallback: number, minimum: number): number {
@@ -324,7 +327,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
     ref,
   ) {
     const componentClass = useComponentClass("prompt-composer");
-    const { messages } = useVelora();
+    const { locale, messages } = useVelora();
     const copy = messages.promptComposer;
     const resolvedPlaceholder = placeholder ?? copy.placeholder;
     const resolvedAttachmentLabel = attachmentLabel ?? copy.attachmentLabel;
@@ -653,7 +656,10 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
             rejections.push({
               file,
               reason: "size",
-              message: copy.fileTooLarge(file.name, formatFileSize(maxFileSize)),
+              message: copy.fileTooLarge(
+                file.name,
+                formatFileSize(maxFileSize, locale),
+              ),
             });
             return;
           }
@@ -714,6 +720,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
         createAttachment,
         disabled,
         attachmentLimit,
+        locale,
         maxFileSize,
         onAttachmentsAdd,
         onAttachmentsRejected,
@@ -924,7 +931,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
             className={cx("vl-prompt-composer__attachments", classNames?.attachments)}
             style={styles?.attachments}
             role="list"
-            aria-label="Attachments"
+            aria-label={copy.attachmentsLabel}
             data-slot="attachments"
           >
             {currentDraft.attachments.map((attachment) => {
@@ -971,7 +978,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
                           ? copy.uploading
                           : attachment.status === "error"
                             ? attachment.error ?? copy.uploadFailed
-                            : formatFileSize(attachment.file.size)}
+                            : formatFileSize(attachment.file.size, locale)}
                       </span>
                       {attachment.status === "error" && retry ? (
                         <button
@@ -986,7 +993,7 @@ export const PromptComposer = forwardRef<HTMLFormElement, PromptComposerProps>(
                           aria-label={resolvedRetryAttachmentLabel(attachment)}
                           data-slot="attachmentRetry"
                         >
-                          {retrying ? "Retrying" : "Retry"}
+                          {retrying ? copy.retrying : copy.retry}
                         </button>
                       ) : null}
                       <button

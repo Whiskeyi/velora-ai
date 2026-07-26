@@ -26,12 +26,15 @@ export interface VeloraMessages {
   promptComposer: {
     placeholder: string;
     attachmentLabel: string;
+    attachmentsLabel: string;
     submitLabel: string;
     stopLabel: string;
     removeAttachment: (fileName: string) => string;
     retryAttachment: (fileName: string) => string;
     uploading: string;
     uploadFailed: string;
+    retry: string;
+    retrying: string;
     sending: string;
     generating: string;
     stopping: string;
@@ -196,12 +199,15 @@ export const enUS: VeloraMessages = {
   promptComposer: {
     placeholder: "Ask anything…",
     attachmentLabel: "Attach files",
+    attachmentsLabel: "Attachments",
     submitLabel: "Send message",
     stopLabel: "Stop generating",
     removeAttachment: (fileName) => `Remove ${fileName}`,
     retryAttachment: (fileName) => `Retry ${fileName}`,
     uploading: "Uploading",
     uploadFailed: "Upload failed",
+    retry: "Retry",
+    retrying: "Retrying",
     sending: "Sending",
     generating: "Generating",
     stopping: "Stopping",
@@ -373,12 +379,15 @@ export const zhCN: VeloraMessages = {
   promptComposer: {
     placeholder: "输入问题、粘贴图片或添加上下文…",
     attachmentLabel: "添加文件",
+    attachmentsLabel: "附件",
     submitLabel: "发送消息",
     stopLabel: "停止生成",
     removeAttachment: (fileName) => `移除 ${fileName}`,
     retryAttachment: (fileName) => `重试 ${fileName}`,
     uploading: "上传中",
     uploadFailed: "上传失败",
+    retry: "重试",
+    retrying: "重试中",
     sending: "发送中",
     generating: "生成中",
     stopping: "停止中",

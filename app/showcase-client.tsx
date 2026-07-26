@@ -3,11 +3,7 @@
 import {
   AgentShell,
   AgentSteps,
-  CodeBlock,
   ConversationList,
-  Formula,
-  MarkdownRenderer,
-  MermaidDiagram,
   MessageActions,
   MessageBranchNavigator,
   MessageBubble,
@@ -69,6 +65,27 @@ import {
   isSampleKey,
   type SampleKey,
 } from "./component-registry";
+
+const CodeBlock = lazy(() =>
+  import("@velora-ai/react/rich-content").then((module) => ({
+    default: module.CodeBlock,
+  })),
+);
+const Formula = lazy(() =>
+  import("@velora-ai/react/rich-content").then((module) => ({
+    default: module.Formula,
+  })),
+);
+const MarkdownRenderer = lazy(() =>
+  import("@velora-ai/react/rich-content").then((module) => ({
+    default: module.MarkdownRenderer,
+  })),
+);
+const MermaidDiagram = lazy(() =>
+  import("@velora-ai/react/rich-content").then((module) => ({
+    default: module.MermaidDiagram,
+  })),
+);
 
 export { COMPONENT_KEYS, isSampleKey };
 export type { SampleKey };
@@ -922,6 +939,7 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
         "autoScroll/followThreshold/showJumpToLatest: tune follow behavior.",
         "empty/emptyPlacement: provide an empty state that starts in reading flow or explicitly centers.",
         "onReachStart/onReachStartError: load older messages and surface failures.",
+        "windowing/onWindowChange: opt into estimated, overscanned rendering for long transcripts.",
         "renderMessage/getLiveAnnouncement: customize rows and concise announcements.",
       ],
       interactions: [
@@ -931,7 +949,7 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
         "Jump to latest clears unseen activity only after the list actually reaches the bottom.",
       ],
       integration:
-        "Keep message IDs stable and replace only changed message objects; for very long histories, window at the render boundary rather than mutating source state.",
+        "Keep message IDs stable and replace only changed message objects; enable built-in windowing for very long histories rather than mutating source state.",
     },
     zh: {
       eyebrow: "消息",
@@ -948,6 +966,7 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
         "autoScroll/followThreshold/showJumpToLatest：调节跟随行为。",
         "empty/emptyPlacement：提供默认位于阅读起点、也可显式居中的空状态。",
         "onReachStart/onReachStartError：加载更早消息并暴露失败。",
+        "windowing/onWindowChange：为超长对话启用带 overscan 的估算窗口化。",
         "renderMessage/getLiveAnnouncement：自定义消息行和简洁播报。",
       ],
       interactions: [
@@ -957,7 +976,7 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
         "Jump to latest 只有在列表真正到底后才清空未读活动。",
       ],
       integration:
-        "保持消息 ID 稳定，只替换真正变化的 message 对象；超长历史应在渲染边界做窗口化，而不是删源状态。",
+        "保持消息 ID 稳定，只替换真正变化的 message 对象；超长历史启用内建窗口化，而不是删除源状态。",
     },
   },
   "reasoning-panel": {
@@ -1331,7 +1350,7 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
         "toolName/description/arguments/result/error: expose the exact action surface.",
         "status/risk: communicate lifecycle and consequence level.",
         "expanded/onExpandedChange/autoOpen: control disclosure around attention states.",
-        "onApprove/onReject/onRetry/onActionError: plug in guarded async decisions.",
+        "confirmApproval/onApprove/onReject/onRetry/onActionError: gate high-risk approval and plug in guarded async decisions.",
       ],
       interactions: [
         "Approve, reject, and retry handlers are locked while pending.",
@@ -1355,7 +1374,7 @@ const componentDocs: Record<SampleKey, Localized<ComponentDoc>> = {
         "toolName/description/arguments/result/error：暴露精确动作面。",
         "status/risk：表达生命周期和后果等级。",
         "expanded/onExpandedChange/autoOpen：控制注意态 disclosure。",
-        "onApprove/onReject/onRetry/onActionError：接入受保护异步决策。",
+        "confirmApproval/onApprove/onReject/onRetry/onActionError：拦截高风险确认并接入受保护异步决策。",
       ],
       interactions: [
         "确认、拒绝和重试 handler pending 时会锁定。",
@@ -1421,6 +1440,7 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
     importName: "AgentShell",
     props: [
       { name: "children", type: "ReactNode", defaultValue: "—", required: true },
+      { name: "contentMode", type: '"summary" | "trace"', defaultValue: '"summary"' },
       { name: "sidebar, header, inspector, composer", type: "ReactNode", defaultValue: "undefined" },
       {
         name: "mobileSidebarOpen/onMobileSidebarOpenChange",
@@ -1579,6 +1599,11 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
       },
       { name: "onReachStart/onReachStartError", type: "(element) => void | Promise<void>", defaultValue: "undefined" },
       { name: "getLiveAnnouncement", type: "(message, context) => string | null", defaultValue: "built-in concise labels" },
+      {
+        name: "windowing/onWindowChange",
+        type: "boolean | MessageListWindowingOptions / (range) => void",
+        defaultValue: "false / undefined",
+      },
     ],
   },
   "reasoning-panel": {
@@ -1622,6 +1647,7 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
         type: "boolean / number / boolean / callback",
         defaultValue: "false / 18 / false",
       },
+      { name: "classNames/styles", type: "Semantic maps by slot", defaultValue: "undefined" },
     ],
   },
   formula: {
@@ -1630,9 +1656,10 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
       { name: "formula", type: "string", defaultValue: "—", required: true },
       { name: "displayMode", type: "boolean", defaultValue: "false" },
       { name: "align", type: '"start" | "center" | "end"', defaultValue: '"start"' },
-      { name: "options", type: "Omit<KatexOptions, 'displayMode'>", defaultValue: "undefined" },
+      { name: "options", type: "SafeKatexOptions", defaultValue: "safe finite limits" },
       { name: "renderError", type: "(error: Error, formula: string) => ReactNode", defaultValue: "undefined" },
       { name: "showCopy/onCopy", type: "boolean / (formula, success) => void", defaultValue: "false" },
+      { name: "classNames/styles", type: "Semantic maps by slot", defaultValue: "undefined" },
     ],
   },
   "markdown-renderer": {
@@ -1651,6 +1678,7 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
         defaultValue: "undefined",
       },
       { name: "components", type: "react-markdown Components", defaultValue: "built-in components" },
+      { name: "classNames/styles", type: "Semantic maps by slot", defaultValue: "undefined" },
     ],
   },
   "mermaid-diagram": {
@@ -1666,6 +1694,7 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
       },
       { name: "showCopySource/onCopySource", type: "boolean / (chart, success) => void", defaultValue: "false" },
       { name: "renderError/onError/onRender", type: "render and lifecycle callbacks", defaultValue: "undefined" },
+      { name: "classNames/styles", type: "Semantic maps by slot", defaultValue: "undefined" },
     ],
   },
   "streaming-indicator": {
@@ -1676,6 +1705,7 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
       { name: "tone", type: '"neutral" | "accent" | "success" | "danger"', defaultValue: '"neutral"' },
       { name: "active/progress", type: "boolean / number", defaultValue: "true / undefined" },
       { name: "announce", type: "boolean", defaultValue: "true" },
+      { name: "classNames/styles", type: "Semantic maps by slot", defaultValue: "undefined" },
     ],
   },
   "tool-call-card": {
@@ -1690,8 +1720,8 @@ const componentApiSpecs: Record<SampleKey, ComponentApiSpec> = {
         defaultValue: 'uncontrolled / "attention"',
       },
       {
-        name: "onApprove/onReject/onRetry/onActionError",
-        type: "async guarded action handlers",
+        name: "confirmApproval/onApprove/onReject/onRetry/onActionError",
+        type: "approval policy gate and async guarded action handlers",
         defaultValue: "undefined",
       },
       { name: "renderValue/statusLabels/riskLabels", type: "render callback / label maps", defaultValue: "built-in" },
@@ -2562,6 +2592,7 @@ function Demo() {
         onFollowChange={setFollowing}
         onNewActivityCountChange={setNewActivity}
         onReachStart={loadHistory}
+        windowing={{ threshold: 200, estimateRowHeight: 112, overscan: 8 }}
         onReachStartError={(error) =>
           setHistoryError(error instanceof Error ? error.message : "History could not be loaded")
         }
@@ -3042,6 +3073,10 @@ render(<Demo />);`,
         risk={risk}
         expanded={expanded}
         onExpandedChange={setExpanded}
+        confirmApproval={({ risk: currentRisk }) =>
+          currentRisk === "low" ||
+          window.confirm("Approve this " + currentRisk + "-risk tool call?")
+        }
         onApprove={approve}
         onReject={reject}
         onRetry={retry}
@@ -3340,9 +3375,7 @@ const HeroAgent = memo(function HeroAgent({ locale }: { locale: Locale }) {
               }}
             />
           }
-        >
-          <MarkdownRenderer content={message.content} streaming={message.status === "streaming"} />
-        </MessageBubble>
+        />
       );
     },
     [feedbackByMessage, regenerate],
@@ -4253,6 +4286,7 @@ function getUsageSnippet(key: SampleKey): string {
   status="approval-required"
   risk="high"
   arguments={toolArgs}
+  confirmApproval={confirmToolApproval}
   onApprove={approveTool}
 />`;
   }

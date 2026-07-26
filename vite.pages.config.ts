@@ -12,6 +12,12 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: /^@velora-ai\/react\/rich-content$/,
+        replacement: fromProjectRoot(
+          "./packages/react/src/rich-content-entry.ts",
+        ),
+      },
+      {
         find: /^@velora-ai\/react\/styles\.css$/,
         replacement: fromProjectRoot("./packages/react/src/velora.css"),
       },
@@ -24,6 +30,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     target: "es2022",
+    manifest: true,
     outDir: fromProjectRoot("./dist-pages"),
     emptyOutDir: true,
     rolldownOptions: {

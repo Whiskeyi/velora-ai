@@ -15,6 +15,7 @@ export {
 export {
   CodeBlock,
   type CodeBlockProps,
+  type CodeBlockSlot,
   type CodeHighlightContext,
   type CodeHighlighter,
   type CodeHighlightResult,
@@ -27,15 +28,23 @@ export {
   type ConversationListStatus,
   type ConversationRenderContext,
 } from "./ConversationList";
-export { Formula, type FormulaAlignment, type FormulaProps } from "./Formula";
+export {
+  Formula,
+  type FormulaAlignment,
+  type FormulaProps,
+  type FormulaSlot,
+  type SafeKatexOptions,
+} from "./Formula";
 export {
   MarkdownRenderer,
   type MarkdownRendererProps,
+  type MarkdownRendererSlot,
 } from "./MarkdownRenderer";
 export {
   MermaidDiagram,
   type MermaidAlignment,
   type MermaidDiagramProps,
+  type MermaidDiagramSlot,
   type SafeMermaidConfig,
 } from "./MermaidDiagram";
 export {
@@ -67,6 +76,8 @@ export {
   type MessageListEmptyPlacement,
   type MessageListProps,
   type MessageListRenderContext,
+  type MessageListWindowingOptions,
+  type MessageListWindowRange,
 } from "./MessageList";
 export {
   PromptComposer,
@@ -94,6 +105,7 @@ export {
 export {
   ReasoningPanel,
   type ReasoningPanelAutoOpen,
+  type ReasoningPanelContentMode,
   type ReasoningPanelProps,
   type ReasoningPanelSlot,
   type ReasoningPanelStatus,
@@ -101,6 +113,7 @@ export {
 export {
   StreamingIndicator,
   type StreamingIndicatorProps,
+  type StreamingIndicatorSlot,
 } from "./StreamingIndicator";
 export {
   ToolCallCard,

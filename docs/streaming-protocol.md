@@ -41,6 +41,8 @@ Supported event names are:
 | `reasoning-delta` | `delta` string |
 | `step` | complete `step` object |
 | `step-update` | `stepId` and partial `patch` |
+| `tool-call` | complete `toolCall` with stable ID, name and status |
+| `tool-call-update` | `toolCallId` and partial `patch` |
 | `message` | complete `message` object |
 | `metadata` | JSON-safe `metadata` object |
 | `error` | `error.message`, optional code/retryable/details |
@@ -48,12 +50,21 @@ Supported event names are:
 
 `[DONE]` in a data frame is also recognized. `ping` and `heartbeat` events are
 ignored. Error and done events terminate the stream by default.
+Set `terminateOnError: false` when the provider uses error frames as recoverable
+warnings; those events are forwarded with `terminal: false` and delivered to
+`useAgentChat.onWarning` without closing the active response.
 
 Successful responses must declare `Content-Type: text/event-stream`, and the
 stream must end with a terminal `done` or terminal `error` event. This makes a
 JSON proxy error or a clean-but-truncated connection retryable instead of
 silently completing a partial answer. Legacy providers can opt out explicitly
 with `validateContentType: false` or `requireTerminalEvent: false`.
+
+Idempotent endpoints can opt into reconnection with
+`maxReconnectAttempts`. Velora retains the most recent SSE `id`, sends it as
+`Last-Event-ID`, respects the server's `retry` field, and otherwise uses capped
+exponential backoff. POST endpoints must deduplicate repeated request IDs before
+enabling this policy.
 
 ## Cancellation and batching
 

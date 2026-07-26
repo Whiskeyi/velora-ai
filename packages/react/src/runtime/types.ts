@@ -44,6 +44,34 @@ export interface AgentStep {
   readonly metadata?: JsonObject;
 }
 
+export type AgentToolCallStatus =
+  | "draft"
+  | "approval-required"
+  | "running"
+  | "complete"
+  | "error"
+  | "cancelled";
+
+export type AgentToolCallRisk = "low" | "medium" | "high" | "critical";
+
+export interface AgentToolCall {
+  readonly id: string;
+  readonly name: string;
+  readonly status: AgentToolCallStatus;
+  readonly risk?: AgentToolCallRisk;
+  readonly arguments?: JsonValue;
+  readonly result?: JsonValue;
+  readonly error?: AgentError;
+  readonly metadata?: JsonObject;
+}
+
+export interface AgentMessageBranch {
+  readonly id: string;
+  readonly parentId?: string;
+  readonly index: number;
+  readonly count: number;
+}
+
 export type AgentAttachmentKind =
   | "file"
   | "image"
@@ -73,6 +101,8 @@ export interface AgentMessage {
   readonly attachments?: readonly AgentAttachment[];
   readonly reasoning?: string;
   readonly steps?: readonly AgentStep[];
+  readonly toolCalls?: readonly AgentToolCall[];
+  readonly branch?: AgentMessageBranch;
   readonly error?: AgentError;
   readonly metadata?: JsonObject;
 }
@@ -137,6 +167,15 @@ export type AgentStreamEvent =
       readonly patch: Partial<Omit<AgentStep, "id">>;
     })
   | (StreamEventBase & {
+      readonly type: "tool-call";
+      readonly toolCall: AgentToolCall;
+    })
+  | (StreamEventBase & {
+      readonly type: "tool-call-update";
+      readonly toolCallId: string;
+      readonly patch: Partial<Omit<AgentToolCall, "id">>;
+    })
+  | (StreamEventBase & {
       readonly type: "message";
       readonly message: AgentMessage;
     })
@@ -147,6 +186,8 @@ export type AgentStreamEvent =
   | (StreamEventBase & {
       readonly type: "error";
       readonly error: AgentError;
+      /** False denotes a recoverable warning and keeps the stream active. */
+      readonly terminal?: boolean;
     })
   | (StreamEventBase & {
       readonly type: "done";
@@ -172,7 +213,8 @@ export type VeloraIdKind =
   | "conversation"
   | "message"
   | "request"
-  | "step";
+  | "step"
+  | "tool-call";
 
 export type VeloraIdFactory = (kind: VeloraIdKind) => string;
 

@@ -4,15 +4,44 @@ import { resolve } from "node:path";
 
 const outputDirectory = resolve(import.meta.dirname, "..", "dist-pages");
 const html = await readFile(resolve(outputDirectory, "index.html"), "utf8");
+const manifest = JSON.parse(
+  await readFile(
+    resolve(outputDirectory, ".vite", "manifest.json"),
+    "utf8",
+  ),
+);
 const entryPath = html.match(/<script[^>]+src="\.\/([^"]+\.js)"/)?.[1];
 const stylesheetPath = html.match(/<link[^>]+href="\.\/([^"]+\.css)"/)?.[1];
-const preloadPaths = [
-  ...html.matchAll(/<link[^>]+rel="modulepreload"[^>]+href="\.\/([^"]+\.js)"/g),
-].map((match) => match[1]);
-
 if (!entryPath || !stylesheetPath) {
   throw new Error("Unable to resolve the Pages entry assets from dist-pages/index.html.");
 }
+
+const manifestEntries = Object.values(manifest);
+const entryRecord = manifestEntries.find(
+  (record) => record.isEntry && record.file === entryPath,
+);
+if (!entryRecord) {
+  throw new Error("Unable to resolve the Pages entry in the Vite manifest.");
+}
+
+const bySource = new Map(
+  Object.entries(manifest).map(([source, record]) => [source, record]),
+);
+const initialSources = new Set();
+const visitStaticImports = (source) => {
+  if (initialSources.has(source)) return;
+  initialSources.add(source);
+  const record = bySource.get(source);
+  for (const dependency of record?.imports ?? []) visitStaticImports(dependency);
+};
+
+// The entry invokes its top-level dynamic bootstraps immediately. Their nested
+// dynamic imports (for example the live editor and Mermaid renderers) remain lazy.
+for (const source of entryRecord.imports ?? []) visitStaticImports(source);
+for (const source of entryRecord.dynamicImports ?? []) visitStaticImports(source);
+const initialPaths = [...initialSources]
+  .map((source) => bySource.get(source)?.file)
+  .filter((file) => typeof file === "string" && file !== entryPath);
 
 const budgets = {
   entryRaw: 300 * 1024,
@@ -33,8 +62,8 @@ const [entry, stylesheet] = await Promise.all([
   measure(entryPath),
   measure(stylesheetPath),
 ]);
-const preloadAssets = await Promise.all(preloadPaths.map(measure));
-const initialJavaScript = preloadAssets.reduce(
+const initialAssets = await Promise.all(initialPaths.map(measure));
+const initialJavaScript = initialAssets.reduce(
   (total, asset) => ({ raw: total.raw + asset.raw, gzip: total.gzip + asset.gzip }),
   { ...entry },
 );

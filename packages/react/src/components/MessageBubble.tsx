@@ -90,7 +90,7 @@ function MessageBubbleInner(
   ref: React.ForwardedRef<HTMLElement>,
 ) {
   const componentClass = useComponentClass("message-bubble");
-  const { messages } = useVelora();
+  const { locale, messages } = useVelora();
   const copy = messages.messageBubble;
   const mergedRoleLabels: Record<AgentMessage["role"], ReactNode> = {
     system: copy.system,
@@ -111,7 +111,10 @@ function MessageBubbleInner(
   const timestampContent = showTimestamp
     ? formatTimestamp
       ? formatTimestamp(message.createdAt, message)
-      : timestamp?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : timestamp?.toLocaleTimeString(locale, {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
     : null;
   const messageError = message.error ? errorMessage(message.error) : null;
   const renderContext: MessageBubbleRenderContext = {

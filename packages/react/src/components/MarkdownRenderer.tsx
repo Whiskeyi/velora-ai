@@ -22,7 +22,14 @@ import {
   type SafeMermaidConfig,
 } from "./MermaidDiagram";
 import { useComponentClass, useVelora } from "./VeloraProvider";
-import { cx } from "./utils";
+import {
+  composeStyles,
+  cx,
+  type SemanticClassNames,
+  type SemanticStyles,
+} from "./utils";
+
+export type MarkdownRendererSlot = "root" | "cursor" | "status";
 
 export interface MarkdownRendererProps
   extends Omit<HTMLAttributes<HTMLDivElement>, "children">,
@@ -45,6 +52,8 @@ export interface MarkdownRendererProps
   >;
   mermaidConfig?: SafeMermaidConfig;
   mermaidProps?: Partial<Omit<MermaidDiagramProps, "chart" | "config">>;
+  classNames?: SemanticClassNames<MarkdownRendererSlot>;
+  styles?: SemanticStyles<MarkdownRendererSlot>;
 }
 
 function stabilizeStreamingContent(content: string): string {
@@ -91,6 +100,9 @@ function MarkdownRendererInner(
     mermaidConfig,
     mermaidProps,
     className,
+    style,
+    classNames,
+    styles,
     skipHtml = true,
     allowElement,
     allowedElements,
@@ -180,6 +192,9 @@ function MarkdownRendererInner(
           </a>
         );
       },
+      img: ({ node: _node, alt, ...props }) => (
+        <img {...props} alt={alt ?? ""} loading="lazy" decoding="async" />
+      ),
     };
     return { ...defaults, ...components };
   }, [codeBlockProps, codeHighlighter, components, mermaidConfig, mermaidProps]);
@@ -197,7 +212,9 @@ function MarkdownRendererInner(
     <div
       {...divProps}
       ref={ref}
-      className={cx(componentClass, className)}
+      className={cx(componentClass, classNames?.root, className)}
+      style={composeStyles(styles?.root, style)}
+      data-slot="root"
       data-streaming={streaming ? "true" : "false"}
       aria-busy={streaming || undefined}
     >
@@ -217,8 +234,18 @@ function MarkdownRendererInner(
       </ReactMarkdown>
       {streaming ? (
         <>
-          <span className="vl-markdown__cursor" aria-hidden="true" />
-          <span className="vl-sr-only" role="status">
+          <span
+            className={cx("vl-markdown__cursor", classNames?.cursor)}
+            style={styles?.cursor}
+            data-slot="cursor"
+            aria-hidden="true"
+          />
+          <span
+            className={cx("vl-sr-only", classNames?.status)}
+            style={styles?.status}
+            data-slot="status"
+            role="status"
+          >
             {resolvedStreamingLabel}
           </span>
         </>

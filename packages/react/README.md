@@ -26,16 +26,16 @@ Velora 的组件按职责拆分，不强制你的后端、模型厂商、上传�
 | `AgentShell` | 会话侧栏、主对话区、输入区、检查器布局 | 状态放在业务层，移动端抽屉交给 shell |
 | `ConversationList` | 会话搜索、分组、新建、状态 | `activeId` 受控，和 `MessageList.conversationKey` 使用同一个会话 ID |
 | `PromptComposer` | 文本、附件、模型/工具选择、预检、停止 | `onSubmit` 返回 accepted，不等待完整 stream；附件上传由业务层完成 |
-| `MessageList` | 流式跟随、阅读锚点、历史 prepend、未读活动 | 保持 message ID 稳定，只替换真正变化的 message 对象 |
+| `MessageList` | 流式跟随、阅读锚点、历史 prepend、未读活动、长列表窗口化 | 保持 message ID 稳定，长会话启用 `windowing` |
 | `MessageBubble` | 单条消息外壳、附件、操作、分支、底部信息 | 富文本正文建议通过 `children` 接 `MarkdownRenderer` |
 | `MessageActions` | 复制、编辑、重新生成、赞踩、异步回滚 | 组件只管交互状态，真正的数据 mutation 由应用完成 |
 | `MessageBranchNavigator` | 多候选回复切换 | `index` 零基受控，分支内容保存在业务状态里 |
-| `ReasoningPanel` | 思考/trace 展开、耗时、错误上下文 | 只传允许展示的思考摘要，不直接暴露敏感链路 |
+| `ReasoningPanel` | 思考摘要/trace 展开、耗时、错误上下文 | 默认使用 `contentMode="summary"`，不直接暴露敏感链路 |
 | `AgentSteps` | 多步骤状态、详情、耗时和 retry | 后端 step 事件要保持稳定 ID，避免展开状态跳动 |
 | `ToolCallCard` | 工具参数、风险、审批、执行、错误和重试 | UI 审批不能替代服务端权限和策略检查 |
 | `MarkdownRenderer` | GFM、公式、代码、Mermaid 的渐进渲染 | 默认不要启用 raw HTML；流式时开启 block 稳定策略 |
 | `CodeBlock` | 高亮、复制、换行、折叠、下载 | 自定义 highlighter 需要净化不可信 HTML |
-| `Formula` | KaTeX 行内/块级公式、复制和错误 fallback | 对模型输出保持 strict 配置 |
+| `Formula` | KaTeX 行内/块级公式、复制和错误 fallback | 安全字段由组件锁定，使用有限 `maxSize` / `maxExpand` |
 | `MermaidDiagram` | Mermaid 懒加载、缩放、复制源、错误恢复 | 对不可信图表使用 strict 安全配置 |
 | `StreamingIndicator` | 生成中、暂停、进度和完成反馈 | 放在等待内容附近，不做全局阻塞 |
 
@@ -258,6 +258,7 @@ import { MessageList } from "@velora-ai/react";
   followThreshold={96}
   reachStartThreshold={40}
   onFollowChange={setFollowing}
+  windowing={{ threshold: 200, estimateRowHeight: 112, overscan: 8 }}
   onNewActivityCountChange={setUnreadUpdates}
   onReachStart={async () => {
     if (loadingHistory || !hasMore) return;

@@ -23,6 +23,15 @@ const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 
 const reactPackageAliases = [
   {
+    find: /^@velora-ai\/react\/rich-content$/,
+    replacement: fileURLToPath(
+      new URL(
+        "./packages/react/src/rich-content-entry.ts",
+        import.meta.url,
+      ),
+    ),
+  },
+  {
     find: /^@velora-ai\/react\/styles\.css$/,
     replacement: fileURLToPath(
       new URL("./packages/react/src/velora.css", import.meta.url),
@@ -79,16 +88,23 @@ export default defineConfig(({ mode }) => {
       lint: true,
     },
     pack: {
-      entry: ["packages/react/src/index.ts", "packages/react/src/velora.css"],
+      entry: [
+        "packages/react/src/index.ts",
+        "packages/react/src/components-entry.ts",
+        "packages/react/src/runtime-entry.ts",
+        "packages/react/src/transport-entry.ts",
+        "packages/react/src/hooks-entry.ts",
+        "packages/react/src/rich-content-entry.ts",
+        "packages/react/src/velora.css",
+      ],
       outDir: "packages/react/dist",
       dts: true,
       format: ["esm"],
       sourcemap: true,
       clean: true,
-      banner: '"use client";',
       copy: [
         {
-          from: "node_modules/katex/dist/fonts/*",
+          from: "node_modules/katex/dist/fonts/*.woff2",
           to: "packages/react/dist/fonts",
           flatten: true,
         },

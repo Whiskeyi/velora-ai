@@ -1,6 +1,13 @@
 import { forwardRef, type HTMLAttributes } from "react";
 import { useComponentClass, useVelora } from "./VeloraProvider";
-import { cx } from "./utils";
+import {
+  composeStyles,
+  cx,
+  type SemanticClassNames,
+  type SemanticStyles,
+} from "./utils";
+
+export type StreamingIndicatorSlot = "root" | "motion" | "label";
 
 export interface StreamingIndicatorProps extends HTMLAttributes<HTMLSpanElement> {
   label?: string;
@@ -11,6 +18,8 @@ export interface StreamingIndicatorProps extends HTMLAttributes<HTMLSpanElement>
   active?: boolean;
   progress?: number;
   announce?: boolean;
+  classNames?: SemanticClassNames<StreamingIndicatorSlot>;
+  styles?: SemanticStyles<StreamingIndicatorSlot>;
 }
 
 export const StreamingIndicator = forwardRef<HTMLSpanElement, StreamingIndicatorProps>(
@@ -25,6 +34,9 @@ export const StreamingIndicator = forwardRef<HTMLSpanElement, StreamingIndicator
       progress,
       announce = true,
       className,
+      style,
+      classNames,
+      styles,
       "aria-label": ariaLabel,
       ...rest
     },
@@ -44,7 +56,9 @@ export const StreamingIndicator = forwardRef<HTMLSpanElement, StreamingIndicator
       <span
         {...rest}
         ref={ref}
-        className={cx(componentClass, className)}
+        className={cx(componentClass, classNames?.root, className)}
+        style={composeStyles(styles?.root, style)}
+        data-slot="root"
         data-size={size}
         data-variant={variant}
         data-tone={tone}
@@ -56,12 +70,24 @@ export const StreamingIndicator = forwardRef<HTMLSpanElement, StreamingIndicator
         aria-valuemax={determinate ? 100 : undefined}
         aria-valuenow={normalizedProgress}
       >
-        <span className="vl-streaming-indicator__motion" aria-hidden="true">
+        <span
+          className={cx("vl-streaming-indicator__motion", classNames?.motion)}
+          style={styles?.motion}
+          data-slot="motion"
+          aria-hidden="true"
+        >
           <span />
           <span />
           <span />
         </span>
-        <span className={visibleLabel ? "vl-streaming-indicator__label" : "vl-sr-only"}>
+        <span
+          className={cx(
+            visibleLabel ? "vl-streaming-indicator__label" : "vl-sr-only",
+            classNames?.label,
+          )}
+          style={styles?.label}
+          data-slot="label"
+        >
           {resolvedLabel}
           {normalizedProgress === undefined ? "" : ` · ${Math.round(normalizedProgress)}%`}
         </span>

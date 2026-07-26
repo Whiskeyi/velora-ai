@@ -24,8 +24,8 @@
     "dev": "vp dev",
     "build": "vp build",
     "build:pages": "vp build --config vite.pages.config.ts && node scripts/prepare-pages-routes.mjs",
-    "build:library": "vp pack",
-    "build:all": "vp pack && vp build",
+    "build:library": "vp pack && node scripts/optimize-package-css.mjs",
+    "build:all": "npm run build:library && vp build",
     "preview": "vp preview",
     "preview:pages": "vp preview --config vite.pages.config.ts --host 127.0.0.1 --port 4174",
     "check": "vp check",
@@ -37,7 +37,8 @@
     "verify:package": "node scripts/verify-package.mjs",
     "verify:showcase": "node scripts/verify-showcase-samples.mjs",
     "verify:site-css": "node scripts/verify-site-css.mjs",
-    "verify:bundle": "node scripts/check-bundle-size.mjs"
+    "verify:bundle": "node scripts/check-bundle-size.mjs",
+    "verify:release": "node scripts/verify-release-version.mjs"
   },
   "dependencies": {
     "katex": "^0.16.22",

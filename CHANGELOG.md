@@ -4,6 +4,14 @@ All notable changes to Velora are documented here.
 
 ## Unreleased
 
+- Add server-safe runtime, transport, hooks, components, and rich-content package
+  entry points while preserving the root compatibility export.
+- Add opt-in long-list windowing, reconnectable SSE with Last-Event-ID,
+  provider request shaping, recoverable stream warnings, and typed tool calls.
+- Harden KaTeX and Mermaid rendering, standardize semantic style slots, and
+  improve clipboard, RTL, mobile, locale, and assistive-technology behavior.
+- Measure the actual immediate Pages import graph and validate release tags,
+  package versions, and production dependency advisories in CI.
 - Add provider-level `en-US` and `zh-CN` component messages with typed deep overrides.
 - Add addressable component detail pages with live editing, reset, API tables, and
   responsive component navigation.

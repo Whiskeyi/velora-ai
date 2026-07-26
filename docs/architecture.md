@@ -11,8 +11,8 @@ endpoint. `createMockTransport` follows the same contract for examples, tests,
 and prototypes. The React hook consumes either transport and commits normalized
 changes to the store. Components subscribe only to the slices they render.
 
-Events distinguish assistant text, reasoning, tool steps, metadata, terminal
-usage, and failures. This prevents UI code from parsing provider-specific
+Events distinguish assistant text, reasoning, steps, typed tool calls, metadata,
+recoverable warnings, terminal usage, and failures. This prevents UI code from parsing provider-specific
 payloads and makes abort/retry behavior deterministic.
 
 ## State ownership
@@ -38,6 +38,8 @@ focus, and a reduced-motion fallback.
 
 - Message rows are memoized by identity; appending a delta does not invalidate
   completed siblings.
+- Long conversations can opt into estimated, overscanned `MessageList`
+  windowing without truncating runtime state.
 - Streaming Markdown defers expensive parsing and isolates code, math, and
   diagram renderers.
 - Mermaid loads on demand and caches the source-to-diagram result.

@@ -527,6 +527,11 @@
   content-visibility: auto;
   contain-intrinsic-size: auto 120px;
 }
+.vl-message-list__spacer {
+  width: 1px;
+  flex: none;
+  pointer-events: none;
+}
 
 .vl-message-list__item[data-group-position="middle"],
 .vl-message-list__item[data-group-position="last"] {
@@ -708,8 +713,8 @@
 .vl-message-bubble__actions {
   min-height: 24px;
   margin-top: 6px;
-  opacity: 0;
-  transform: translateY(-2px);
+  opacity: 0.38;
+  transform: none;
   transition: opacity 150ms ease, transform 150ms ease;
 }
 .vl-message-bubble:hover .vl-message-bubble__actions,
@@ -717,7 +722,7 @@
 .vl-message-bubble[data-status="error"] .vl-message-bubble__actions { opacity: 1; transform: translateY(0); }
 
 .vl-message-actions { display: inline-flex; min-height: 30px; align-items: center; gap: 2px; }
-.vl-message-actions__button { display: grid; width: 30px; height: 30px; place-items: center; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--_vl-text-muted); cursor: pointer; transition: background-color 140ms ease, color 140ms ease, transform 140ms ease; }
+.vl-message-actions__button { display: grid; width: 32px; height: 32px; place-items: center; padding: 0; border: 0; border-radius: 9px; background: transparent; color: var(--_vl-text-muted); cursor: pointer; transition: background-color 140ms ease, color 140ms ease, transform 140ms ease; }
 .vl-message-actions__button:hover:not(:disabled) { background: color-mix(in srgb, var(--_vl-surface-elevated) 76%, transparent); color: var(--_vl-text); }
 .vl-message-actions__button:active:not(:disabled) { transform: scale(0.91); }
 .vl-message-actions__button:disabled { opacity: 0.36; cursor: not-allowed; }
@@ -727,7 +732,7 @@
 .vl-message-actions__error { padding: 4px 7px; border-radius: 7px; background: color-mix(in srgb, var(--_vl-danger) 9%, transparent); color: var(--_vl-danger); font-size: 10.5px; }
 
 .vl-message-branch-navigator { display: inline-flex; align-items: center; gap: 2px; }
-.vl-message-branch-navigator__button { display: grid; width: 26px; height: 26px; place-items: center; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--_vl-text-muted); cursor: pointer; }
+.vl-message-branch-navigator__button { display: grid; width: 30px; height: 30px; place-items: center; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--_vl-text-muted); cursor: pointer; }
 .vl-message-branch-navigator__button:hover:not(:disabled) { background: color-mix(in srgb, var(--_vl-surface-elevated) 72%, transparent); color: var(--_vl-text); }
 .vl-message-branch-navigator__button:disabled { opacity: 0.28; cursor: default; }
 .vl-message-branch-navigator__button svg { width: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
@@ -1179,11 +1184,11 @@ button.vl-tool-call-card__header:hover { background: color-mix(in srgb, var(--_v
 
 .vl-code-block__toolbar {
   display: flex;
-  min-height: 37px;
+  min-height: 36px;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 6px 8px 6px 13px;
+  gap: 8px;
+  padding: 4px 6px 4px 12px;
   border-bottom: 1px solid rgb(255 255 255 / 0.08);
   background: rgb(255 255 255 / 0.025);
 }
@@ -1262,7 +1267,7 @@ button.vl-tool-call-card__header:hover { background: color-mix(in srgb, var(--_v
 
 .vl-mermaid__title { margin-bottom: 10px; color: var(--_vl-text-muted); font-size: 11px; font-weight: 620; }
 .vl-mermaid__loading { display: flex; min-height: 92px; align-items: center; justify-content: flex-start; color: var(--_vl-text-muted); }
-.vl-mermaid__controls { position: sticky; z-index: 2; top: 0; display: flex; width: fit-content; align-items: center; gap: 3px; padding: 4px; margin: 0 0 10px auto; border: 1px solid var(--_vl-border); border-radius: 9px; background: color-mix(in srgb, var(--_vl-surface-elevated) 90%, transparent); backdrop-filter: blur(12px); }
+.vl-mermaid__controls { position: sticky; z-index: 2; top: 0; display: flex; width: fit-content; align-items: center; gap: 3px; padding: 4px; margin-block: 0 10px; margin-inline-start: auto; border: 1px solid var(--_vl-border); border-radius: 9px; background: color-mix(in srgb, var(--_vl-surface-elevated) 90%, transparent); backdrop-filter: blur(12px); }
 .vl-mermaid__controls button { min-width: 28px; height: 28px; padding: 0 7px; border: 0; border-radius: 6px; background: transparent; color: var(--_vl-text-muted); font: 520 10px/1 var(--_vl-font-sans); cursor: pointer; }
 .vl-mermaid__controls button:hover:not(:disabled) { background: color-mix(in srgb, var(--_vl-text) 7%, transparent); color: var(--_vl-text); }
 .vl-mermaid__controls button:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -1399,19 +1404,19 @@ button.vl-tool-call-card__header:hover { background: color-mix(in srgb, var(--_v
 
 @container vl-code-block (max-width: 460px) {
   .vl-code-block__toolbar {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 3px;
-    padding: 8px;
+    gap: 6px;
+    padding: 4px 6px 4px 10px;
   }
 
   .vl-code-block__identity {
-    min-height: 28px;
-    padding-inline: 5px;
+    min-height: 0;
+    padding-inline: 0;
   }
 
   .vl-code-block__actions {
-    width: 100%;
+    width: auto;
+    max-width: 72%;
+    margin-inline-start: auto;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
     scrollbar-width: none;
@@ -1435,7 +1440,7 @@ button.vl-tool-call-card__header:hover { background: color-mix(in srgb, var(--_v
   .vl-mermaid__controls {
     width: 100%;
     justify-content: space-between;
-    margin-left: 0;
+    margin-inline-start: 0;
   }
 
   .vl-mermaid__controls button {
@@ -1484,10 +1489,10 @@ button.vl-tool-call-card__header:hover { background: color-mix(in srgb, var(--_v
     position: absolute;
     z-index: 6;
     top: 0;
-    right: 0;
+    inset-inline-end: 0;
     bottom: 0;
     width: min(88%, 340px);
-    border-left: 1px solid var(--_vl-border);
+    border-inline-start: 1px solid var(--_vl-border);
     box-shadow: -20px 0 60px rgb(0 0 0 / 0.28);
     visibility: hidden;
     transform: translateX(104%);
@@ -1495,6 +1500,13 @@ button.vl-tool-call-card__header:hover { background: color-mix(in srgb, var(--_v
   }
   .vl-agent-shell__inspector[data-open="true"] {
     visibility: visible;
+    transform: translateX(0);
+  }
+  [dir="rtl"] .vl-agent-shell__inspector {
+    box-shadow: 20px 0 60px rgb(0 0 0 / 0.28);
+    transform: translateX(-104%);
+  }
+  [dir="rtl"] .vl-agent-shell__inspector[data-open="true"] {
     transform: translateX(0);
   }
   .vl-agent-shell__backdrop {
@@ -1523,9 +1535,9 @@ button.vl-tool-call-card__header:hover { background: color-mix(in srgb, var(--_v
     z-index: 6;
     top: 0;
     bottom: 0;
-    left: 0;
+    inset-inline-start: 0;
     width: min(88%, 300px);
-    border-right: 1px solid var(--_vl-border);
+    border-inline-end: 1px solid var(--_vl-border);
     box-shadow: 20px 0 60px rgb(0 0 0 / 0.28);
     visibility: hidden;
     transform: translateX(-104%);
@@ -1533,6 +1545,13 @@ button.vl-tool-call-card__header:hover { background: color-mix(in srgb, var(--_v
   }
   .vl-agent-shell__sidebar[data-open="true"] {
     visibility: visible;
+    transform: translateX(0);
+  }
+  [dir="rtl"] .vl-agent-shell__sidebar {
+    box-shadow: -20px 0 60px rgb(0 0 0 / 0.28);
+    transform: translateX(104%);
+  }
+  [dir="rtl"] .vl-agent-shell__sidebar[data-open="true"] {
     transform: translateX(0);
   }
   .vl-agent-shell__composer { padding: 0 10px 10px; }
@@ -1561,14 +1580,18 @@ button.vl-tool-call-card__header:hover { background: color-mix(in srgb, var(--_v
   .vl-conversation-list__actions :where(button, a),
   .vl-message-actions__button,
   .vl-message-branch-navigator__button,
-  .vl-code-block__copy,
-  .vl-code-block__action,
   .vl-code-block__expand,
   .vl-formula__copy,
   .vl-mermaid__controls button,
   .vl-mermaid__error button {
     min-width: 44px;
     min-height: 44px;
+  }
+  .vl-code-block__copy,
+  .vl-code-block__action {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 5px 8px;
   }
   .vl-agent-shell__panel-toggle {
     width: 44px;

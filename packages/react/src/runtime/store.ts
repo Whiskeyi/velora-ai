@@ -4,6 +4,7 @@ import type {
   AgentError,
   AgentMessage,
   AgentStep,
+  AgentToolCall,
   Conversation,
   CreateConversationInput,
   VeloraIdFactory,
@@ -31,6 +32,9 @@ export interface AgentStoreData {
   readonly messagesById: Readonly<Record<string, AgentMessage>>;
   readonly conversationOrder: readonly string[];
   readonly messageVersionByConversation: Readonly<Record<string, number>>;
+  readonly lastChangedMessageIdByConversation: Readonly<
+    Partial<Record<string, string>>
+  >;
   readonly runsByConversation: Readonly<Record<string, AgentRunState>>;
   readonly activeConversationId: string | null;
 }
@@ -60,6 +64,12 @@ export interface AgentStoreActions {
     messageId: string,
     stepId: string,
     patch: Partial<Omit<AgentStep, "id">>,
+  ): void;
+  upsertToolCall(messageId: string, toolCall: AgentToolCall): void;
+  patchToolCall(
+    messageId: string,
+    toolCallId: string,
+    patch: Partial<Omit<AgentToolCall, "id">>,
   ): void;
   beginRun(conversationId: string, run: Omit<AgentRunState, "status">): boolean;
   finishRun(
@@ -167,6 +177,7 @@ function createInitialData(options: CreateAgentStoreOptions): AgentStoreData {
     messageVersionByConversation: Object.fromEntries(
       conversationOrder.map((id) => [id, 0]),
     ),
+    lastChangedMessageIdByConversation: {},
     runsByConversation: {},
     activeConversationId,
   };
@@ -258,6 +269,10 @@ export function createAgentStore(
             state.messageVersionByConversation,
             conversationId,
           ),
+          lastChangedMessageIdByConversation: deleteKey(
+            state.lastChangedMessageIdByConversation,
+            conversationId,
+          ),
           runsByConversation: deleteKey(
             state.runsByConversation,
             conversationId,
@@ -296,6 +311,10 @@ export function createAgentStore(
             [conversationId]:
               (state.messageVersionByConversation[conversationId] ?? 0) + 1,
           },
+          lastChangedMessageIdByConversation: deleteKey(
+            state.lastChangedMessageIdByConversation,
+            conversationId,
+          ),
           runsByConversation: deleteKey(
             state.runsByConversation,
             conversationId,
@@ -326,6 +345,9 @@ export function createAgentStore(
         const messageVersionByConversation = {
           ...state.messageVersionByConversation,
         };
+        const lastChangedMessageIdByConversation = {
+          ...state.lastChangedMessageIdByConversation,
+        };
         const batchIds = new Set<string>();
 
         for (const message of messages) {
@@ -347,6 +369,7 @@ export function createAgentStore(
           };
           messageVersionByConversation[conversation.id] =
             (messageVersionByConversation[conversation.id] ?? 0) + 1;
+          lastChangedMessageIdByConversation[conversation.id] = message.id;
         }
 
         return {
@@ -354,6 +377,7 @@ export function createAgentStore(
           messagesById,
           conversationsById,
           messageVersionByConversation,
+          lastChangedMessageIdByConversation,
         };
       });
     },
@@ -385,6 +409,10 @@ export function createAgentStore(
             [message.conversationId]:
               (state.messageVersionByConversation[message.conversationId] ?? 0) +
               1,
+          },
+          lastChangedMessageIdByConversation: {
+            ...state.lastChangedMessageIdByConversation,
+            [message.conversationId]: messageId,
           },
         };
       });
@@ -418,6 +446,10 @@ export function createAgentStore(
               (state.messageVersionByConversation[message.conversationId] ?? 0) +
               1,
           },
+          lastChangedMessageIdByConversation: {
+            ...state.lastChangedMessageIdByConversation,
+            [message.conversationId]: messageId,
+          },
         };
       });
     },
@@ -447,6 +479,10 @@ export function createAgentStore(
               (state.messageVersionByConversation[message.conversationId] ?? 0) +
               1,
           },
+          lastChangedMessageIdByConversation: {
+            ...state.lastChangedMessageIdByConversation,
+            [message.conversationId]: messageId,
+          },
         };
       });
     },
@@ -475,6 +511,10 @@ export function createAgentStore(
             [message.conversationId]:
               (state.messageVersionByConversation[message.conversationId] ?? 0) +
               1,
+          },
+          lastChangedMessageIdByConversation: {
+            ...state.lastChangedMessageIdByConversation,
+            [message.conversationId]: messageId,
           },
         };
       });
@@ -512,6 +552,10 @@ export function createAgentStore(
               (state.messageVersionByConversation[message.conversationId] ?? 0) +
               1,
           },
+          lastChangedMessageIdByConversation: {
+            ...state.lastChangedMessageIdByConversation,
+            [message.conversationId]: messageId,
+          },
         };
       });
     },
@@ -541,6 +585,10 @@ export function createAgentStore(
               (state.messageVersionByConversation[message.conversationId] ?? 0) +
               1,
           },
+          lastChangedMessageIdByConversation: {
+            ...state.lastChangedMessageIdByConversation,
+            [message.conversationId]: messageId,
+          },
         };
       });
     },
@@ -569,6 +617,71 @@ export function createAgentStore(
             [message.conversationId]:
               (state.messageVersionByConversation[message.conversationId] ?? 0) +
               1,
+          },
+          lastChangedMessageIdByConversation: {
+            ...state.lastChangedMessageIdByConversation,
+            [message.conversationId]: messageId,
+          },
+        };
+      });
+    },
+
+    upsertToolCall(messageId, toolCall) {
+      set((state) => {
+        const message = state.messagesById[messageId];
+        if (!message) return state;
+        const toolCalls = [...(message.toolCalls ?? [])];
+        const index = toolCalls.findIndex(
+          (candidate) => candidate.id === toolCall.id,
+        );
+        if (index === -1) toolCalls.push(toolCall);
+        else toolCalls[index] = { ...toolCalls[index], ...toolCall };
+        return {
+          ...state,
+          messagesById: {
+            ...state.messagesById,
+            [messageId]: { ...message, toolCalls, updatedAt: now() },
+          },
+          messageVersionByConversation: {
+            ...state.messageVersionByConversation,
+            [message.conversationId]:
+              (state.messageVersionByConversation[message.conversationId] ?? 0) +
+              1,
+          },
+          lastChangedMessageIdByConversation: {
+            ...state.lastChangedMessageIdByConversation,
+            [message.conversationId]: messageId,
+          },
+        };
+      });
+    },
+
+    patchToolCall(messageId, toolCallId, patch) {
+      set((state) => {
+        const message = state.messagesById[messageId];
+        const index =
+          message?.toolCalls?.findIndex((toolCall) => toolCall.id === toolCallId) ??
+          -1;
+        if (!message?.toolCalls || index === -1) return state;
+        const toolCalls = [...message.toolCalls];
+        const current = toolCalls[index];
+        if (!current) return state;
+        toolCalls[index] = { ...current, ...patch, id: current.id };
+        return {
+          ...state,
+          messagesById: {
+            ...state.messagesById,
+            [messageId]: { ...message, toolCalls, updatedAt: now() },
+          },
+          messageVersionByConversation: {
+            ...state.messageVersionByConversation,
+            [message.conversationId]:
+              (state.messageVersionByConversation[message.conversationId] ?? 0) +
+              1,
+          },
+          lastChangedMessageIdByConversation: {
+            ...state.lastChangedMessageIdByConversation,
+            [message.conversationId]: messageId,
           },
         };
       });
@@ -688,27 +801,39 @@ export function selectConversations() {
 export function selectConversationMessages(conversationId: string) {
   let previousIds: readonly string[] | undefined;
   let previousMessages: readonly AgentMessage[] = EMPTY_MESSAGES;
+  let previousVersion: number | undefined;
+  let indexById = new Map<string, number>();
 
   return (state: AgentStoreState): readonly AgentMessage[] => {
     const ids = state.conversationsById[conversationId]?.messageIds;
+    const version = state.messageVersionByConversation[conversationId] ?? 0;
     if (!ids) {
       previousIds = undefined;
       previousMessages = EMPTY_MESSAGES;
+      previousVersion = undefined;
+      indexById = new Map();
       return EMPTY_MESSAGES;
     }
 
-    if (
-      ids === previousIds &&
-      ids.length === previousMessages.length &&
-      ids.every(
-        (messageId, index) =>
-          state.messagesById[messageId] === previousMessages[index],
-      )
-    ) {
-      return previousMessages;
+    if (ids === previousIds && ids.length === previousMessages.length) {
+      if (version === previousVersion) return previousMessages;
+      const changedId =
+        state.lastChangedMessageIdByConversation[conversationId];
+      const changedIndex = changedId ? indexById.get(changedId) : undefined;
+      const changedMessage =
+        changedId !== undefined ? state.messagesById[changedId] : undefined;
+      if (changedIndex !== undefined && changedMessage) {
+        const nextMessages = [...previousMessages];
+        nextMessages[changedIndex] = changedMessage;
+        previousMessages = nextMessages;
+        previousVersion = version;
+        return previousMessages;
+      }
     }
 
     previousIds = ids;
+    previousVersion = version;
+    indexById = new Map(ids.map((id, index) => [id, index]));
     previousMessages = ids.flatMap((id) => {
       const message = state.messagesById[id];
       return message ? [message] : [];

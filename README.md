@@ -37,9 +37,17 @@ Velora 不是一个固定聊天模板，而是一套可组合的 AI 交互组件
 | Conversation | `MessageList`, `MessageBubble`, `MessageActions`, `MessageBranchNavigator`, `PromptComposer` |
 | Agent process | `ReasoningPanel`, `AgentSteps`, `ToolCallCard`, `StreamingIndicator` |
 | Rich output | `MarkdownRenderer`, `CodeBlock`, `Formula`, `MermaidDiagram` |
-| Runtime | `useAgentChat`, isolated Zustand store, real SSE and deterministic mock transports |
+| Runtime | `useAgentChat`, isolated Zustand store, reconnectable SSE and deterministic mock transports |
 
-The runtime normalizes `start`, text/reasoning deltas, steps, messages, metadata, errors, and terminal events. The UI subscribes only to the state it renders.
+The runtime normalizes `start`, text/reasoning deltas, steps, tool calls,
+messages, metadata, recoverable warnings, and terminal events.
+
+Pure adapters can be imported without crossing a client boundary:
+
+```ts
+import { createSSETransport } from "@velora-ai/react/transport";
+import { createAgentStore } from "@velora-ai/react/runtime";
+```
 
 ## Run the workbench
 
@@ -185,7 +193,7 @@ function WorkspaceComposer({ activeId }: { activeId: string }) {
 
 ## Interaction contracts
 
-- `MessageList` follows streaming growth only while the reader remains near the bottom. Scrolling upward preserves reading position, accumulates new activity, and exposes “jump to latest”. Pass `conversationKey` when the dataset changes so scroll/activity state resets with the session. Prepending stable-ID history through `onReachStart` preserves the scroll anchor; rejected loads are contained and reported through `onReachStartError`.
+- `MessageList` follows streaming growth only while the reader remains near the bottom. Scrolling upward preserves reading position, accumulates new activity, and exposes “jump to latest”. Pass `conversationKey` when the dataset changes so scroll/activity state resets with the session. For long histories, `windowing={{ threshold: 200 }}` renders an estimated viewport with overscan.
 - `MessageActions` provides copy, regenerate, edit, like/dislike, async locks, rollback, and announcements. `MessageBranchNavigator` selects a zero-based response version with buttons or arrow/Home/End keys. Applications own the actual message mutation and branch data.
 - `ToolCallCard` models approval-required, running, complete, failed, cancelled, and retry states with risk labels and guarded async actions. UI approval never replaces server-side authorization and policy checks.
 - `ReasoningPanel` separates disclosure from run status and elapsed time. `AgentSteps` renders immutable step state, auto-expands active/error detail, measures duration, and guards retry actions.
@@ -207,6 +215,8 @@ See the package [usage and API guide](packages/react/README.md), [streaming prot
 ```ts
 const transport = createSSETransport({
   url: "/api/agent",
+  maxReconnectAttempts: 3,
+  connectTimeoutMs: 15_000,
   headers: () => ({ Authorization: "Bearer …" }),
   parseEvent(frame) {
     return frame.event === "token"
@@ -215,6 +225,11 @@ const transport = createSSETransport({
   },
 });
 ```
+
+Reconnects carry the latest SSE `id` through `Last-Event-ID`; enable them only
+for endpoints that make repeated requests idempotent. `useAgentChat` also accepts
+`prepareRequestMessages` for token-window truncation/provider mapping and
+`onWarning` for non-terminal stream errors.
 
 `createMockTransport` uses the same `AgentTransport` contract for deterministic component tests and demos. Stores are isolated per `useAgentChat` surface unless an explicit store is shared.
 

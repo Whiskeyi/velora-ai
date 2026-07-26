@@ -125,6 +125,32 @@ describe("Velora SSE transport", () => {
     });
   });
 
+  it("maps typed tool-call lifecycle events", () => {
+    expect(
+      parseAgentSSEFrame({
+        event: "tool-call",
+        data: JSON.stringify({
+          toolCall: {
+            id: "tool-1",
+            name: "search",
+            status: "approval-required",
+            risk: "high",
+            arguments: { query: "Velora" },
+          },
+        }),
+      }),
+    ).toEqual({
+      type: "tool-call",
+      toolCall: {
+        id: "tool-1",
+        name: "search",
+        status: "approval-required",
+        risk: "high",
+        arguments: { query: "Velora" },
+      },
+    });
+  });
+
   it("preserves typed message attachments from SSE message events", () => {
     expect(
       parseAgentSSEFrame({
@@ -268,5 +294,74 @@ describe("Velora SSE transport", () => {
     await expect(collect(transport.stream(request))).resolves.toEqual([
       { type: "text-delta", delta: "legacy" },
     ]);
+  });
+
+  it("keeps recoverable error events non-terminal when configured", async () => {
+    const transport = createSSETransport({
+      url: "/api/agent",
+      terminateOnError: false,
+      fetch: async () =>
+        new Response(
+          streamBytes(
+            [
+              'event: error\ndata: {"error":{"message":"temporary"}}\n\n',
+              'event: text-delta\ndata: {"delta":"recovered"}\n\n',
+              "event: done\ndata: {}\n\n",
+            ].join(""),
+            [5],
+          ),
+          { headers: { "Content-Type": "text/event-stream" } },
+        ),
+    });
+
+    await expect(collect(transport.stream(request))).resolves.toEqual([
+      {
+        type: "error",
+        error: { message: "temporary" },
+        terminal: false,
+      },
+      { type: "text-delta", delta: "recovered" },
+      { type: "done" },
+    ]);
+  });
+
+  it("reconnects idempotent streams with Last-Event-ID", async () => {
+    let attempt = 0;
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      attempt += 1;
+      if (attempt === 1) {
+        return new Response(
+          streamBytes(
+            'id: event-1\nevent: text-delta\ndata: {"delta":"A"}\n\n',
+            [4],
+          ),
+          { headers: { "Content-Type": "text/event-stream" } },
+        );
+      }
+      expect(new Headers(init?.headers).get("Last-Event-ID")).toBe("event-1");
+      return new Response(
+        streamBytes(
+          [
+            'event: text-delta\ndata: {"delta":"B"}\n\n',
+            "event: done\ndata: {}\n\n",
+          ].join(""),
+          [6],
+        ),
+        { headers: { "Content-Type": "text/event-stream" } },
+      );
+    });
+    const transport = createSSETransport({
+      url: "/api/agent",
+      fetch: fetcher,
+      maxReconnectAttempts: 1,
+      reconnectDelayMs: 0,
+    });
+
+    await expect(collect(transport.stream(request))).resolves.toEqual([
+      { type: "text-delta", delta: "A", eventId: "event-1" },
+      { type: "text-delta", delta: "B" },
+      { type: "done" },
+    ]);
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 });

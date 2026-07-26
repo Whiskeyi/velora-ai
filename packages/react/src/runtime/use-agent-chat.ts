@@ -191,6 +191,12 @@ export interface UseAgentChatOptions {
   readonly stopOnUnmount?: boolean;
   readonly onEvent?: (event: AgentStreamEvent) => void;
   readonly onError?: (error: AgentError) => void;
+  readonly onWarning?: (warning: AgentError) => void;
+  /** Shapes or truncates provider context immediately before transport. */
+  readonly prepareRequestMessages?: (
+    messages: readonly AgentMessage[],
+    request: Omit<ChatRequest, "messages">,
+  ) => readonly AgentMessage[] | Promise<readonly AgentMessage[]>;
 }
 
 export interface UseAgentChatResult {
@@ -214,6 +220,8 @@ interface LatestOptions {
   streamBatchMs: number;
   onEvent?: (event: AgentStreamEvent) => void;
   onError?: (error: AgentError) => void;
+  onWarning?: (warning: AgentError) => void;
+  prepareRequestMessages?: UseAgentChatOptions["prepareRequestMessages"];
 }
 
 function updateLatestOptions(
@@ -227,6 +235,10 @@ function updateLatestOptions(
     streamBatchMs: options.streamBatchMs ?? 16,
     ...(options.onEvent ? { onEvent: options.onEvent } : {}),
     ...(options.onError ? { onError: options.onError } : {}),
+    ...(options.onWarning ? { onWarning: options.onWarning } : {}),
+    ...(options.prepareRequestMessages
+      ? { prepareRequestMessages: options.prepareRequestMessages }
+      : {}),
   };
 }
 
@@ -367,10 +379,9 @@ export function useAgentChat(options: UseAgentChatOptions): UseAgentChatResult {
         flush: flushPending,
       });
 
-      const request: ChatRequest = {
+      const requestBase = {
         conversationId,
         responseMessageId: input.responseMessage.id,
-        messages: input.requestMessages.filter(canSendToTransport),
         ...(input.requestMetadata
           ? { metadata: input.requestMetadata }
           : {}),
@@ -379,6 +390,17 @@ export function useAgentChat(options: UseAgentChatOptions): UseAgentChatResult {
       let outcome: "complete" | "error" | "aborted" = "complete";
       let terminal = false;
       try {
+        const transportMessages = input.requestMessages.filter(canSendToTransport);
+        const preparedMessages = latestRef.current.prepareRequestMessages
+          ? await latestRef.current.prepareRequestMessages(
+              transportMessages,
+              requestBase,
+            )
+          : transportMessages;
+        const request: ChatRequest = {
+          ...requestBase,
+          messages: preparedMessages,
+        };
         for await (const event of latestRef.current.transport.stream(request, {
           signal: controller.signal,
         })) {
@@ -433,6 +455,19 @@ export function useAgentChat(options: UseAgentChatOptions): UseAgentChatResult {
                 event.patch,
               );
               break;
+            case "tool-call":
+              actions.upsertToolCall(
+                input.responseMessage.id,
+                event.toolCall,
+              );
+              break;
+            case "tool-call-update":
+              actions.patchToolCall(
+                input.responseMessage.id,
+                event.toolCallId,
+                event.patch,
+              );
+              break;
             case "message":
               actions.patchMessage(input.responseMessage.id, {
                 content: event.message.content,
@@ -483,6 +518,10 @@ export function useAgentChat(options: UseAgentChatOptions): UseAgentChatResult {
               }));
               break;
             case "error":
+              if (event.terminal === false) {
+                notify(latestRef.current.onWarning, event.error);
+                break;
+              }
               actions.patchMessage(input.responseMessage.id, {
                 status: "error",
                 error: event.error,

@@ -20,6 +20,7 @@ import {
 
 export type ReasoningPanelStatus = "idle" | "running" | "complete" | "error";
 export type ReasoningPanelAutoOpen = "while-running" | "always" | "never";
+export type ReasoningPanelContentMode = "summary" | "trace";
 
 export type ReasoningPanelSlot =
   | "root"
@@ -41,6 +42,8 @@ export interface ReasoningPanelProps extends Omit<
   children: ReactNode;
   title?: ReactNode;
   description?: ReactNode;
+  /** Declares whether content is a user-safe summary or an application trace. */
+  contentMode?: ReasoningPanelContentMode;
   status?: ReasoningPanelStatus;
   open?: boolean;
   defaultOpen?: boolean;
@@ -75,6 +78,7 @@ export const ReasoningPanel = forwardRef<HTMLElement, ReasoningPanelProps>(funct
     children,
     title,
     description,
+    contentMode = "summary",
     status = "complete",
     open,
     defaultOpen = false,
@@ -242,6 +246,7 @@ export const ReasoningPanel = forwardRef<HTMLElement, ReasoningPanelProps>(funct
       style={composeStyles(styles?.root, style)}
       data-slot="root"
       data-status={status}
+      data-content-mode={contentMode}
       data-open={isOpen ? "true" : "false"}
       aria-busy={status === "running" || undefined}
     >

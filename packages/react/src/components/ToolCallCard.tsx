@@ -72,6 +72,13 @@ export interface ToolCallCardProps extends Omit<HTMLAttributes<HTMLElement>, "ch
   autoOpen?: ToolCallAutoOpen;
   collapsible?: boolean;
   disabled?: boolean;
+  /**
+   * Optional policy gate invoked before approval. Return false when the user
+   * cancels or when an application-level confirmation requirement is unmet.
+   */
+  confirmApproval?: (
+    context: ToolCallActionContext,
+  ) => boolean | Promise<boolean>;
   onApprove?: (context: ToolCallActionContext) => void | Promise<void>;
   onReject?: (context: ToolCallActionContext) => void | Promise<void>;
   onRetry?: (context: ToolCallActionContext) => void | Promise<void>;
@@ -131,6 +138,7 @@ export const ToolCallCard = forwardRef<HTMLElement, ToolCallCardProps>(function 
     autoOpen = "attention",
     collapsible = true,
     disabled = false,
+    confirmApproval,
     onApprove,
     onReject,
     onRetry,
@@ -254,6 +262,13 @@ export const ToolCallCard = forwardRef<HTMLElement, ToolCallCardProps>(function 
     setActionError(undefined);
 
     try {
+      if (
+        action === "approve" &&
+        confirmApproval &&
+        !(await Promise.resolve(confirmApproval(context)))
+      ) {
+        return;
+      }
       await Promise.resolve(handler(context));
     } catch (caughtError) {
       if (mountedRef.current) setActionError(caughtError);

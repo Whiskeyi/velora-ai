@@ -596,6 +596,28 @@ describe("MessageList streaming behavior", () => {
     expect(view.querySelector("[data-slot='live-region']")?.textContent).toBe("");
   });
 
+  it("windows long conversations while preserving original render indexes", async () => {
+    const messages = Array.from({ length: 250 }, (_, index) =>
+      message(String(index)),
+    );
+    const renderedIndexes: number[] = [];
+    const view = await render(
+      <MessageList
+        autoScroll={false}
+        messages={messages}
+        windowing={{ threshold: 100, overscan: 4 }}
+        renderMessage={(_item, context) => {
+          renderedIndexes.push(context.index);
+          return <span>{context.index}</span>;
+        }}
+      />,
+    );
+
+    expect(renderedIndexes.length).toBeLessThan(messages.length);
+    expect(renderedIndexes[0]).toBe(0);
+    expect(view.querySelector("[data-spacer='end']")).not.toBeNull();
+  });
+
   it("counts unique unseen activity, announces completion once, and clears at bottom", async () => {
     const first = message("1", "user");
     const partial = message("2", "assistant", {

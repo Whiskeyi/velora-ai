@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -27,6 +28,21 @@ export interface MessageListRenderContext {
 
 export type MessageListLiveActivityKind = "added" | "complete" | "error" | "aborted";
 export type MessageListEmptyPlacement = "start" | "center";
+
+export interface MessageListWindowingOptions {
+  /** Message count at which windowing starts. Defaults to 200. */
+  threshold?: number;
+  /** Estimated rendered row height including spacing. Defaults to 112px. */
+  estimateRowHeight?: number;
+  /** Extra rows rendered before and after the viewport. Defaults to 6. */
+  overscan?: number;
+}
+
+export interface MessageListWindowRange {
+  start: number;
+  end: number;
+  total: number;
+}
 
 export interface MessageListLiveActivityContext {
   kind: MessageListLiveActivityKind;
@@ -62,6 +78,9 @@ export interface MessageListProps extends Omit<HTMLAttributes<HTMLDivElement>, "
   onReachStart?: (element: HTMLDivElement) => void | Promise<void>;
   /** Receives synchronous throws and rejected history-loading promises. */
   onReachStartError?: (error: unknown, element: HTMLDivElement) => void;
+  /** Opt-in estimated windowing for very long conversations. */
+  windowing?: boolean | MessageListWindowingOptions;
+  onWindowChange?: (range: MessageListWindowRange) => void;
 }
 
 interface MessageListRowProps {
@@ -178,6 +197,8 @@ function MessageListInner(
     onNewActivityCountChange,
     onReachStart,
     onReachStartError,
+    windowing = false,
+    onWindowChange,
     ...rest
   }: MessageListProps,
   forwardedRef: React.ForwardedRef<HTMLDivElement>,
@@ -227,6 +248,8 @@ function MessageListInner(
   const [following, setFollowing] = useState(true);
   const [newActivityCount, setNewActivityCount] = useState(0);
   const [liveAnnouncement, setLiveAnnouncement] = useState<LiveAnnouncement | null>(null);
+  const [viewport, setViewport] = useState({ scrollTop: 0, height: 0 });
+  const windowFrameRef = useRef(0);
 
   const setRootRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -278,6 +301,7 @@ function MessageListInner(
     let fallback: HTMLElement | null = null;
     for (const element of content.children) {
       if (!(element instanceof HTMLElement)) continue;
+      if (element.dataset.spacer) continue;
       fallback = element;
       if (element.getBoundingClientRect().bottom > rootTop) {
         anchor = element;
@@ -366,8 +390,30 @@ function MessageListInner(
     }
     if (followingRef.current) visualAnchorRef.current = null;
     else captureVisualAnchor();
+    if (windowing) {
+      cancelAnimationFrame(windowFrameRef.current);
+      windowFrameRef.current = requestAnimationFrame(() => {
+        setViewport({
+          scrollTop: element.scrollTop,
+          height: element.clientHeight,
+        });
+      });
+    }
     onScroll?.(event);
   };
+
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(windowFrameRef.current);
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root || !windowing) return;
+    setViewport({ scrollTop: root.scrollTop, height: root.clientHeight });
+  }, [conversationKey, messages.length, windowing]);
 
   useLayoutEffect(() => {
     if (Object.is(conversationKeyRef.current, conversationKey)) return;
@@ -542,6 +588,35 @@ function MessageListInner(
     newActivityCount > 0
       ? copy.newActivity(newActivityCount, resolvedJumpToLatestLabel)
       : resolvedJumpToLatestLabel;
+  const windowRange = useMemo<MessageListWindowRange>(() => {
+    const options = typeof windowing === "object" ? windowing : {};
+    const threshold = Math.max(1, Math.floor(options.threshold ?? 200));
+    if (!windowing || messages.length < threshold) {
+      return { start: 0, end: messages.length, total: messages.length };
+    }
+    const rowHeight = Math.max(24, options.estimateRowHeight ?? 112);
+    const overscan = Math.max(1, Math.floor(options.overscan ?? 6));
+    const visibleRows = Math.max(1, Math.ceil(viewport.height / rowHeight));
+    const estimatedStart = Math.floor(viewport.scrollTop / rowHeight);
+    const start = Math.max(
+      0,
+      Math.min(messages.length - 1, estimatedStart - overscan),
+    );
+    const end = Math.min(
+      messages.length,
+      start + visibleRows + overscan * 2,
+    );
+    return { start, end, total: messages.length };
+  }, [messages.length, viewport.height, viewport.scrollTop, windowing]);
+  const windowOptions = typeof windowing === "object" ? windowing : {};
+  const estimatedRowHeight = Math.max(
+    24,
+    windowOptions.estimateRowHeight ?? 112,
+  );
+
+  useEffect(() => {
+    onWindowChange?.(windowRange);
+  }, [onWindowChange, windowRange]);
 
   return (
     <div
@@ -561,17 +636,43 @@ function MessageListInner(
         {messages.length === 0 ? (
           <div className="vl-message-list__empty">{resolvedEmpty}</div>
         ) : (
-          messages.map((message, index) => (
-            <MessageListRow
-              key={message.id}
-              message={message}
-              index={index}
-              groupPosition={getGroupPosition(messages, index)}
-              isLatest={index === messages.length - 1}
-              following={following}
-              renderMessage={renderMessage}
-            />
-          ))
+          <>
+            {windowRange.start > 0 ? (
+              <div
+                className="vl-message-list__spacer"
+                style={{ height: windowRange.start * estimatedRowHeight }}
+                aria-hidden="true"
+                data-spacer="start"
+              />
+            ) : null}
+            {messages
+              .slice(windowRange.start, windowRange.end)
+              .map((message, localIndex) => {
+                const index = windowRange.start + localIndex;
+                return (
+                  <MessageListRow
+                    key={message.id}
+                    message={message}
+                    index={index}
+                    groupPosition={getGroupPosition(messages, index)}
+                    isLatest={index === messages.length - 1}
+                    following={following}
+                    renderMessage={renderMessage}
+                  />
+                );
+              })}
+            {windowRange.end < messages.length ? (
+              <div
+                className="vl-message-list__spacer"
+                style={{
+                  height:
+                    (messages.length - windowRange.end) * estimatedRowHeight,
+                }}
+                aria-hidden="true"
+                data-spacer="end"
+              />
+            ) : null}
+          </>
         )}
       </div>
       <span
