@@ -8,6 +8,7 @@ import {
 } from "./demo-fixtures";
 import { getPropDescription } from "./prop-description";
 import { resolveShowcaseLocale } from "./use-showcase-locale";
+import { resolveShowcaseTheme } from "./use-showcase-theme";
 
 describe("showcase infrastructure", () => {
   it("localizes seeded messages without changing their identity", () => {
@@ -74,5 +75,13 @@ describe("showcase infrastructure", () => {
     expect(resolveShowcaseLocale("", "zh")).toBe("zh");
     expect(resolveShowcaseLocale("?lang=en", "zh")).toBe("en");
     expect(resolveShowcaseLocale("?lang=zh", "en")).toBe("zh");
+  });
+
+  it("resolves an explicit theme before a saved or system preference", () => {
+    expect(resolveShowcaseTheme("", null, false)).toBe("light");
+    expect(resolveShowcaseTheme("", null, true)).toBe("dark");
+    expect(resolveShowcaseTheme("", "dark", false)).toBe("dark");
+    expect(resolveShowcaseTheme("?theme=light", "dark", true)).toBe("light");
+    expect(resolveShowcaseTheme("?theme=dark", "light", false)).toBe("dark");
   });
 });

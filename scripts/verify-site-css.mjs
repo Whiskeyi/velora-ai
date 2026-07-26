@@ -18,6 +18,9 @@ const requiredSelectors = [
   ".vl-message-actions",
   ".vl-message-branch-navigator",
   ".vl-tool-call-card",
+  ".theme-toggle",
+  "[data-showcase-theme=light]",
+  ".live-preview-shell[data-theme=light]",
 ];
 const missingSelectors = requiredSelectors.filter((selector) => !productionCss.includes(selector));
 

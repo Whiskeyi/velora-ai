@@ -28,6 +28,7 @@ const componentNames = [
   "ToolCallCard",
   "VeloraProvider",
   "usePromptDrafts",
+  "useVelora",
 ];
 
 function unwrapExpression(node) {

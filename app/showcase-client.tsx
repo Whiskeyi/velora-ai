@@ -16,6 +16,7 @@ import {
   createAgentStore,
   useAgentChat,
   usePromptDrafts,
+  useVelora,
   type AgentMessage,
   type PromptDraft,
   type ToolCallStatus,
@@ -34,6 +35,7 @@ import {
   Layers3,
   Menu,
   Monitor,
+  Moon,
   PanelLeft,
   Play,
   Radio,
@@ -42,6 +44,7 @@ import {
   Sparkles,
   Tablet,
   TerminalSquare,
+  Sun,
   Workflow,
   X,
   Zap,
@@ -81,11 +84,12 @@ import {
   MarkdownRenderer,
   MermaidDiagram,
 } from "./showcase/lazy-components";
-import type { ComponentDoc, Locale, ViewportKey } from "./showcase/model";
+import type { ComponentDoc, Locale, ShowcaseTheme, ViewportKey } from "./showcase/model";
 import { getPropDescription } from "./showcase/prop-description";
 import { getComponentHref, getHomeHref } from "./showcase/routing";
 import { loadShowcaseSample, SHOWCASE_SAMPLE_BY_KEY, SHOWCASE_SAMPLES } from "./showcase/samples";
 import { useShowcaseLocale } from "./showcase/use-showcase-locale";
+import { useShowcaseTheme } from "./showcase/use-showcase-theme";
 
 export { COMPONENT_KEYS, isSampleKey };
 export type { SampleKey };
@@ -106,6 +110,8 @@ const siteCopy = {
       explore: "Explore",
       languageLabel: "Switch language",
       languageValue: "EN",
+      lightTheme: "Switch to light theme",
+      darkTheme: "Switch to dark theme",
       menuOpen: "Open navigation",
       menuClose: "Close navigation",
     },
@@ -328,6 +334,8 @@ const siteCopy = {
       explore: "查看组件",
       languageLabel: "切换语言",
       languageValue: "中",
+      lightTheme: "切换到浅色主题",
+      darkTheme: "切换到深色主题",
       menuOpen: "打开导航",
       menuClose: "关闭导航",
     },
@@ -967,14 +975,19 @@ const HeroAgent = memo(function HeroAgent({ locale }: { locale: Locale }) {
 function Navbar({
   locale,
   onLocaleChange,
+  theme,
+  onThemeChange,
   homeHref = "",
 }: {
   locale: Locale;
   onLocaleChange: (locale: Locale) => void;
+  theme: ShowcaseTheme;
+  onThemeChange: (theme: ShowcaseTheme) => void;
   homeHref?: string;
 }) {
   const t = siteCopy[locale].nav;
   const nextLocale = locale === "en" ? "zh" : "en";
+  const nextTheme = theme === "dark" ? "light" : "dark";
   const [open, setOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -1030,6 +1043,16 @@ function Navbar({
         </div>
 
         <div className="nav-actions">
+          <button
+            className="theme-toggle"
+            type="button"
+            aria-label={nextTheme === "light" ? t.lightTheme : t.darkTheme}
+            aria-pressed={theme === "light"}
+            title={nextTheme === "light" ? t.lightTheme : t.darkTheme}
+            onClick={() => onThemeChange(nextTheme)}
+          >
+            {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
           <button
             className="language-toggle"
             type="button"
@@ -1246,11 +1269,13 @@ function ComponentDocPanel({
 
 function ComponentWorkbench({
   locale,
+  theme,
   activeKey,
   onActiveKeyChange,
   compact = false,
 }: {
   locale: Locale;
+  theme: ShowcaseTheme;
   activeKey: SampleKey;
   onActiveKeyChange: (key: SampleKey) => void;
   compact?: boolean;
@@ -1260,7 +1285,7 @@ function ComponentWorkbench({
   const [editorReady, setEditorReady] = useState(false);
   const [viewport, setViewport] = useState<ViewportKey>("desktop");
   const [mobilePane, setMobilePane] = useState<"preview" | "code">("preview");
-  const [previewTheme, setPreviewTheme] = useState<"dark" | "light">("dark");
+  const [previewTheme, setPreviewTheme] = useState<"dark" | "light">(theme);
   const [previewDensity, setPreviewDensity] = useState<"compact" | "comfortable">("comfortable");
   const [previewDirection, setPreviewDirection] = useState<"ltr" | "rtl">("ltr");
   const [previewReducedMotion, setPreviewReducedMotion] = useState(false);
@@ -1277,6 +1302,10 @@ function ComponentWorkbench({
     { key: "tablet" as const, label: t.viewports.tablet, Icon: Tablet },
     { key: "mobile" as const, label: t.viewports.mobile, Icon: Smartphone },
   ];
+
+  useEffect(() => {
+    setPreviewTheme(theme);
+  }, [theme]);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -1353,6 +1382,7 @@ function ComponentWorkbench({
       StreamingIndicator,
       ToolCallCard,
       VeloraProvider,
+      useVelora,
       usePromptDrafts,
       useCallback,
       useEffect,
@@ -1553,7 +1583,11 @@ function ComponentWorkbench({
                         {previewReducedMotion ? t.motionReduced : t.motionOn}
                       </button>
                     </div>
-                    <div className="live-preview-shell" data-viewport={viewport}>
+                    <div
+                      className="live-preview-shell"
+                      data-theme={previewTheme}
+                      data-viewport={viewport}
+                    >
                       <div className="preview-light preview-light-one" />
                       <div className="preview-light preview-light-two" />
                       <VeloraProvider
@@ -2069,27 +2103,57 @@ function Footer({ locale, homeHref = "" }: { locale: Locale; homeHref?: string }
   );
 }
 
-function ShowcaseTheme({ children, locale }: { children: ReactNode; locale: Locale }) {
+const showcaseThemeTokens = {
+  dark: {
+    accent: "#7f96ff",
+    accentContrast: "#070a10",
+    background: "transparent",
+    surface: "rgba(15, 20, 30, 0.78)",
+    surfaceElevated: "rgba(22, 28, 41, 0.88)",
+    text: "#f3f6ff",
+    textMuted: "#8e99ae",
+    border: "rgba(207, 219, 255, 0.12)",
+    danger: "#ff8294",
+    success: "#74e4b3",
+    warning: "#f5ca7a",
+    shadow: "0 24px 70px rgba(0, 0, 0, 0.34)",
+  },
+  light: {
+    accent: "#5468d9",
+    accentContrast: "#ffffff",
+    background: "transparent",
+    surface: "rgba(255, 255, 255, 0.76)",
+    surfaceElevated: "rgba(255, 255, 255, 0.94)",
+    text: "#182033",
+    textMuted: "#667085",
+    border: "rgba(40, 53, 82, 0.13)",
+    danger: "#c73c55",
+    success: "#14785b",
+    warning: "#9b5f05",
+    shadow: "0 24px 70px rgba(64, 77, 111, 0.14)",
+  },
+} as const;
+
+function ShowcaseTheme({
+  children,
+  locale,
+  theme,
+}: {
+  children: ReactNode;
+  locale: Locale;
+  theme: ShowcaseTheme;
+}) {
+  const tokens = showcaseThemeTokens[theme];
+
   return (
     <VeloraProvider
       className="showcase-provider"
-      theme="dark"
+      theme={theme}
       locale={locale === "zh" ? "zh-CN" : "en-US"}
       tokens={{
-        accent: "#7f96ff",
-        accentContrast: "#070a10",
-        background: "transparent",
-        surface: "rgba(15, 20, 30, 0.78)",
-        surfaceElevated: "rgba(22, 28, 41, 0.88)",
-        text: "#f3f6ff",
-        textMuted: "#8e99ae",
-        border: "rgba(207, 219, 255, 0.12)",
-        danger: "#ff8294",
-        success: "#74e4b3",
-        warning: "#f5ca7a",
+        ...tokens,
         radius: "16px",
         radiusSmall: "10px",
-        shadow: "0 24px 70px rgba(0, 0, 0, 0.34)",
         blur: "24px",
         fontSans: "var(--font-sans)",
         fontMono: "var(--font-mono)",
@@ -2102,6 +2166,7 @@ function ShowcaseTheme({ children, locale }: { children: ReactNode; locale: Loca
 
 export function ComponentDetailClient({ componentKey }: { componentKey: SampleKey }) {
   const { locale, setLocale } = useShowcaseLocale();
+  const { theme, setTheme } = useShowcaseTheme();
   const detailSidebarRef = useRef<HTMLElement | null>(null);
   const [componentQuery, setComponentQuery] = useState("");
   const sample = SHOWCASE_SAMPLE_BY_KEY[componentKey];
@@ -2143,10 +2208,16 @@ export function ComponentDetailClient({ componentKey }: { componentKey: SampleKe
   }, [componentKey, locale]);
 
   return (
-    <ShowcaseTheme locale={locale}>
+    <ShowcaseTheme locale={locale} theme={theme}>
       <main className="component-detail-page" id="top">
         <div className="page-noise" aria-hidden="true" />
-        <Navbar locale={locale} onLocaleChange={setLocale} homeHref={homeHref} />
+        <Navbar
+          locale={locale}
+          onLocaleChange={setLocale}
+          theme={theme}
+          onThemeChange={setTheme}
+          homeHref={homeHref}
+        />
 
         <header className="component-detail-hero section-shell">
           <nav aria-label={locale === "zh" ? "面包屑" : "Breadcrumb"}>
@@ -2200,6 +2271,7 @@ export function ComponentDetailClient({ componentKey }: { componentKey: SampleKe
             <section id="demo" aria-label={locale === "zh" ? "实时示例" : "Live example"}>
               <ComponentWorkbench
                 locale={locale}
+                theme={theme}
                 activeKey={componentKey}
                 onActiveKeyChange={() => undefined}
                 compact
@@ -2241,14 +2313,20 @@ export function ComponentDetailClient({ componentKey }: { componentKey: SampleKe
 
 export function ShowcaseClient() {
   const { locale, setLocale } = useShowcaseLocale();
+  const { theme, setTheme } = useShowcaseTheme();
   const [activeComponentKey, setActiveComponentKey] = useState<SampleKey>("prompt-composer");
   const copy = siteCopy[locale];
 
   return (
-    <ShowcaseTheme locale={locale}>
+    <ShowcaseTheme locale={locale} theme={theme}>
       <main>
         <div className="page-noise" aria-hidden="true" />
-        <Navbar locale={locale} onLocaleChange={setLocale} />
+        <Navbar
+          locale={locale}
+          onLocaleChange={setLocale}
+          theme={theme}
+          onThemeChange={setTheme}
+        />
         <Hero locale={locale} />
         <div
           className="trust-strip"
@@ -2263,6 +2341,7 @@ export function ShowcaseClient() {
         </div>
         <ComponentWorkbench
           locale={locale}
+          theme={theme}
           activeKey={activeComponentKey}
           onActiveKeyChange={setActiveComponentKey}
         />

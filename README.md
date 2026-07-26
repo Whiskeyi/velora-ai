@@ -16,6 +16,8 @@ The repository contains the publishable `@velora-ai/react` package and a live-ed
 
 The documentation site now separates the live component workbench from a component API reference. The home page keeps a compact component index, while every primitive has an addressable `/components/<component>/` detail page with a live editor, API table, interaction contract, and responsive navigation.
 
+The site follows the system color scheme on first visit and offers a persistent light/dark switch in the navigation. The live workbench can override theme, density, direction, and reduced motion independently, so every component contract is inspectable without changing the surrounding documentation.
+
 ## Recommended composition
 
 - `VeloraProvider` owns theme tokens, density, motion, semantic classes, and global `en-US` / `zh-CN` component messages.

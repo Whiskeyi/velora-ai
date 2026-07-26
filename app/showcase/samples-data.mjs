@@ -141,13 +141,18 @@ render(<Demo />);`,
     eyebrow: "Foundation",
     description: "A typed token boundary for theme, density, direction, and motion preferences.",
     code: `function Demo() {
-  const [theme, setTheme] = useState("dark");
+  const { theme: outerTheme } = useVelora();
+  const [theme, setTheme] = useState(outerTheme === "system" ? "dark" : outerTheme);
   const [density, setDensity] = useState("comfortable");
   const message = {
     id: "provider-message", conversationId: "provider", role: "assistant",
     content: "Tokens cascade through every Velora primitive.",
     status: "complete", createdAt: 1, updatedAt: 1,
   };
+
+  useEffect(() => {
+    setTheme(outerTheme === "system" ? "dark" : outerTheme);
+  }, [outerTheme]);
 
   return (
     <div className="live-demo">
@@ -906,6 +911,7 @@ render(<Demo />);`,
 };
 
 function Demo() {
+  const { theme } = useVelora();
   const [mode, setMode] = useState("stream");
   const [status, setStatus] = useState("Rendering stream diagram…");
   const [zoom, setZoom] = useState(1);
@@ -930,7 +936,7 @@ function Demo() {
         title={mode === "loop" ? "Prompt sequence" : "Streaming event path"}
         chart={charts[mode]}
         align={align}
-        config={{ theme: "dark" }}
+        config={{ theme: theme === "dark" ? "dark" : "neutral" }}
         interactive
         zoom={zoom}
         minZoom={0.65}
@@ -979,6 +985,7 @@ render(<Demo />);`,
 ].join("\\n");
 
 function Demo() {
+  const { theme } = useVelora();
   const lines = chunks.split("\\n");
   const [cursor, setCursor] = useState(2);
   const [streaming, setStreaming] = useState(true);
@@ -1015,7 +1022,7 @@ function Demo() {
         streamingMode="immediate"
         stabilizeIncompleteBlocks
         codeBlockProps={{ showWrapToggle: true, collapsible: true, collapseAfterLines: 6, showDownload: true }}
-        mermaidConfig={{ theme: "dark" }}
+        mermaidConfig={{ theme: theme === "dark" ? "dark" : "neutral" }}
         mermaidProps={{ align: "start" }}
       />
     </div>

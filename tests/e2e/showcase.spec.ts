@@ -1,5 +1,30 @@
 import { expect, test } from "@playwright/test";
 
+test("the site theme follows the system, switches, and persists", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chromium");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/");
+
+  const root = page.locator("html");
+  const provider = page.locator(".showcase-provider").first();
+  await expect(root).toHaveAttribute("data-showcase-theme", "dark");
+  await expect(provider).toHaveAttribute("data-vl-theme", "dark");
+
+  await page.getByRole("button", { name: "Switch to light theme" }).click();
+  await expect(root).toHaveAttribute("data-showcase-theme", "light");
+  await expect(provider).toHaveAttribute("data-vl-theme", "light");
+  await expect(page.getByRole("button", { name: "Switch to dark theme" })).toBeVisible();
+
+  await page.reload();
+  await expect(root).toHaveAttribute("data-showcase-theme", "light");
+  await expect(provider).toHaveAttribute("data-vl-theme", "light");
+
+  await page.goto("/components/mermaid-diagram/");
+  await expect(root).toHaveAttribute("data-showcase-theme", "light");
+  await expect(provider).toHaveAttribute("data-vl-theme", "light");
+  await expect(page.locator(".vl-mermaid__canvas svg")).toBeVisible();
+});
+
 test("the hero sends a mock SSE run and switches locale", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chromium");
   await page.goto("/");
@@ -68,10 +93,12 @@ test("mobile component docs avoid page overflow and expose compact navigation", 
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile-chromium");
+  await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/components/mermaid-diagram/");
 
   await expect(page.getByRole("heading", { level: 1, name: "MermaidDiagram" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Switch to light theme" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Preview" })).toBeVisible();
   await expect(page.locator(".vl-mermaid__canvas svg")).toBeVisible();
   await expect(page.locator(".vl-mermaid")).toHaveAttribute("data-align", "start");

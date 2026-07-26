@@ -2,6 +2,8 @@ import type { SampleKey } from "../component-registry";
 
 export type Locale = "en" | "zh";
 
+export type ShowcaseTheme = "light" | "dark";
+
 export type Localized<T> = Record<Locale, T>;
 
 export type ViewportKey = "desktop" | "tablet" | "mobile";
