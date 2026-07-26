@@ -49,7 +49,10 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: "node",
-      include: ["packages/react/src/**/*.test.{ts,tsx}"],
+      include: [
+        "packages/react/src/**/*.test.{ts,tsx}",
+        "app/showcase/**/*.test.{ts,tsx}",
+      ],
     },
     lint: {
       ignorePatterns: ["dist/**", ".next/**", "packages/react/dist/**"],

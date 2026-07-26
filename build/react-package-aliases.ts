@@ -32,6 +32,22 @@ export const reactPackageAliases = [
     replacement: fromProjectRoot("packages/react/src/velora.css"),
   },
   {
+    find: /^@velora-ai\/react\/components$/,
+    replacement: fromProjectRoot("packages/react/src/components-entry.ts"),
+  },
+  {
+    find: /^@velora-ai\/react\/hooks$/,
+    replacement: fromProjectRoot("packages/react/src/hooks-entry.ts"),
+  },
+  {
+    find: /^@velora-ai\/react\/runtime$/,
+    replacement: fromProjectRoot("packages/react/src/runtime-entry.ts"),
+  },
+  {
+    find: /^@velora-ai\/react\/transport$/,
+    replacement: fromProjectRoot("packages/react/src/transport-entry.ts"),
+  },
+  {
     find: /^@velora-ai\/react$/,
     replacement: fromProjectRoot("packages/react/src/index.ts"),
   },

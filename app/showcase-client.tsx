@@ -14,8 +14,6 @@ import {
   ToolCallCard,
   VeloraProvider,
   createAgentStore,
-  createMockTransport,
-  createSSETransport,
   useAgentChat,
   usePromptDrafts,
   type AgentMessage,
@@ -66,6 +64,14 @@ import {
   COMPONENT_DOCS,
 } from "./showcase/component-docs";
 import {
+  demoConversations,
+  getDemoMessages,
+  getDemoSteps,
+  localizeConversations,
+  localizeDemoMessages,
+} from "./showcase/demo-fixtures";
+import { createDemoTransport } from "./showcase/demo-transport";
+import {
   CodeBlock,
   Formula,
   LiveEditor,
@@ -76,6 +82,7 @@ import {
   MermaidDiagram,
 } from "./showcase/lazy-components";
 import type { ComponentDoc, Locale, ViewportKey } from "./showcase/model";
+import { getPropDescription } from "./showcase/prop-description";
 import { getComponentHref, getHomeHref } from "./showcase/routing";
 import { loadShowcaseSample, SHOWCASE_SAMPLE_BY_KEY, SHOWCASE_SAMPLES } from "./showcase/samples";
 import { useShowcaseLocale } from "./showcase/use-showcase-locale";
@@ -166,7 +173,7 @@ const siteCopy = {
         "Keep one calm primary action.",
         "Reveal tool progress only when it builds trust.",
         "Preserve reading position while tokens arrive.",
-      ],
+      ] as const,
       responseNote:
         "This demo uses Velora’s deterministic mock transport. Swap it for the SSE adapter without changing the component tree.",
       stepIntent: "Understand intent",
@@ -387,7 +394,7 @@ const siteCopy = {
         "保留一个安静、明确的主操作。",
         "只在有助于建立信任时展示工具进度。",
         "流式内容到达时保持用户当前阅读位置。",
-      ],
+      ] as const,
       responseNote: "此演示使用 Velora 的确定性模拟传输；替换为 SSE 适配器时无需改动组件树。",
       stepIntent: "理解意图",
       stepIntentDescription: "将请求映射为可组合的交互原语",
@@ -527,213 +534,6 @@ const siteCopy = {
   },
 } satisfies Record<Locale, Record<string, unknown>>;
 
-function getPropDescription(doc: ComponentDoc, propName: string, locale: Locale): string {
-  const normalizedName = propName.toLowerCase();
-  const aliases = propName
-    .split(/[/,]/)
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
-  const match = doc.props.find((item) => {
-    const [name] = item.split(":");
-    const normalizedDocName = name?.trim().toLowerCase();
-    if (!normalizedDocName) return false;
-    if (normalizedDocName === normalizedName) return true;
-    const docAliases = normalizedDocName
-      .split(/[/,]/)
-      .map((part) => part.trim())
-      .filter(Boolean);
-    return aliases.some(
-      (alias) =>
-        docAliases.includes(alias) ||
-        normalizedDocName.includes(alias) ||
-        normalizedName.includes(normalizedDocName),
-    );
-  });
-  if (!match) {
-    return locale === "zh"
-      ? `配置 ${propName}。类型、默认值与是否必填以本行定义为准。`
-      : `Configures ${propName}. The type, default, and required state are defined in this row.`;
-  }
-  const [, ...description] = match.split(":");
-  return description.join(":").trim() || match;
-}
-
-const demoConversationCopy: Record<
-  Locale,
-  Record<string, { title: string; preview: string; age: string }>
-> = {
-  en: {
-    launch: { title: "Launch narrative", preview: "Refining the product story", age: "Now" },
-    research: { title: "Research synthesis", preview: "12 sources connected", age: "18m" },
-    architecture: { title: "Runtime architecture", preview: "SSE transport mapped", age: "1h" },
-  },
-  zh: {
-    launch: { title: "发布叙事", preview: "正在打磨产品故事", age: "刚刚" },
-    research: { title: "研究综合", preview: "已连接 12 个来源", age: "18 分钟" },
-    architecture: { title: "运行时架构", preview: "SSE 传输已映射", age: "1 小时" },
-  },
-};
-
-function localizeConversations<T extends (typeof demoConversations)[number]>(
-  conversations: readonly T[],
-  locale: Locale,
-): T[] {
-  return conversations.map((conversation) => {
-    const localized = demoConversationCopy[locale][conversation.id];
-    if (!localized) return conversation;
-    return {
-      ...conversation,
-      title: localized.title,
-      metadata: {
-        ...conversation.metadata,
-        preview: localized.preview,
-        age: localized.age,
-      },
-    };
-  });
-}
-
-const demoConversations = [
-  {
-    id: "launch",
-    title: "Launch narrative",
-    messageIds: ["user-demo", "assistant-demo"],
-    createdAt: 1_752_787_200_000,
-    updatedAt: 1_752_790_800_000,
-    metadata: { preview: "Refining the product story", age: "Now", status: "idle" },
-  },
-  {
-    id: "research",
-    title: "Research synthesis",
-    messageIds: ["research-user", "research-assistant"],
-    createdAt: 1_752_700_800_000,
-    updatedAt: 1_752_789_720_000,
-    metadata: { preview: "12 sources connected", age: "18m", status: "unread" },
-  },
-  {
-    id: "architecture",
-    title: "Runtime architecture",
-    messageIds: ["architecture-user", "architecture-assistant"],
-    createdAt: 1_752_614_400_000,
-    updatedAt: 1_752_787_200_000,
-    metadata: { preview: "SSE transport mapped", age: "1h", status: "idle" },
-  },
-];
-
-const assistantMessage = {
-  id: "assistant-demo",
-  conversationId: "launch",
-  role: "assistant" as const,
-  content:
-    "The interface is ready. Every token, tool call, and reasoning state can render progressively without blocking the main thread.",
-  status: "complete" as const,
-  createdAt: 1_752_790_760_000,
-  updatedAt: 1_752_790_800_000,
-};
-
-const demoMessages = [
-  {
-    id: "user-demo",
-    conversationId: "launch",
-    role: "user" as const,
-    content: "Design a calmer onboarding flow for our AI workspace.",
-    status: "complete" as const,
-    createdAt: 1_752_790_720_000,
-    updatedAt: 1_752_790_720_000,
-  },
-  assistantMessage,
-];
-
-const researchMessages: readonly AgentMessage[] = [
-  {
-    id: "research-user",
-    conversationId: "research",
-    role: "user",
-    content: "Synthesize the strongest patterns across the connected sources.",
-    status: "complete",
-    createdAt: 1_752_789_600_000,
-    updatedAt: 1_752_789_600_000,
-  },
-  {
-    id: "research-assistant",
-    conversationId: "research",
-    role: "assistant",
-    content:
-      "The clearest pattern is progressive disclosure: reveal depth on demand while preserving the current task context.",
-    status: "complete",
-    createdAt: 1_752_789_660_000,
-    updatedAt: 1_752_789_720_000,
-  },
-];
-
-const architectureMessages: readonly AgentMessage[] = [
-  {
-    id: "architecture-user",
-    conversationId: "architecture",
-    role: "user",
-    content: "Map the event path from transport to rendered message.",
-    status: "complete",
-    createdAt: 1_752_787_080_000,
-    updatedAt: 1_752_787_080_000,
-  },
-  {
-    id: "architecture-assistant",
-    conversationId: "architecture",
-    role: "assistant",
-    content:
-      "SSE events enter the transport, normalize into the external store, then update only the subscribed message rows.",
-    status: "complete",
-    createdAt: 1_752_787_140_000,
-    updatedAt: 1_752_787_200_000,
-  },
-];
-
-const seededDemoMessages: readonly AgentMessage[] = [
-  ...demoMessages,
-  ...researchMessages,
-  ...architectureMessages,
-];
-
-const demoMessageContent: Record<Locale, Record<string, string>> = {
-  en: {},
-  zh: {
-    "user-demo": "为我们的 AI 工作区设计一套更平静的引导流程。",
-    "assistant-demo": "界面已经就绪。每个 token、工具调用和思考状态都能渐进渲染，不阻塞主线程。",
-    "research-user": "综合已连接资料中最有价值的设计模式。",
-    "research-assistant": "最清晰的模式是渐进式披露：按需呈现深度，同时保留当前任务上下文。",
-    "architecture-user": "梳理从传输层事件到消息渲染的完整链路。",
-    "architecture-assistant":
-      "SSE 事件进入传输层后会被归一化到外部状态仓库，并且只更新订阅了变化数据的消息行。",
-  },
-};
-
-function localizeDemoMessages(
-  messages: readonly AgentMessage[],
-  locale: Locale,
-): readonly AgentMessage[] {
-  const content = demoMessageContent[locale];
-  if (locale === "en") return messages;
-  return messages.map((message) => {
-    const localized = content[message.id];
-    return localized ? { ...message, content: localized } : message;
-  });
-}
-
-function getDemoSteps(locale: Locale) {
-  if (locale === "zh") {
-    return [
-      { id: "intent", title: "理解意图", status: "complete" as const },
-      { id: "patterns", title: "比较方案", status: "complete" as const },
-      { id: "compose", title: "组织回复", status: "running" as const },
-    ];
-  }
-  return [
-    { id: "intent", title: "Understand intent", status: "complete" as const },
-    { id: "patterns", title: "Compare patterns", status: "complete" as const },
-    { id: "compose", title: "Compose response", status: "running" as const },
-  ];
-}
-
 function BrandMark() {
   return (
     <span className="brand-mark" aria-hidden="true">
@@ -744,76 +544,16 @@ function BrandMark() {
   );
 }
 
-function createDemoTransport(locale: Locale) {
-  const isStaticDemo =
-    typeof document !== "undefined" &&
-    document.documentElement.dataset.veloraDemoTransport === "mock";
-
-  if (!isStaticDemo) {
-    return createSSETransport({ url: "/api/demo/stream" });
-  }
-
-  const copy = siteCopy[locale].agent;
-  return createMockTransport({
-    initialDelayMs: 120,
-    chunkSize: [2, 4, 3, 5],
-    reasoningChunkSize: [10, 14, 8],
-    delayMs: ({ event }) => {
-      if (event.type === "text-delta") return 20;
-      if (event.type === "reasoning-delta" || event.type === "reasoning-summary-delta") {
-        return 72;
-      }
-      if (event.type === "step") return 90;
-      return 36;
-    },
-    response: ({ lastUserMessage }) => {
-      const subject = lastUserMessage?.content.trim().slice(0, 120) || "this interface request";
-      const completedAt = Date.now();
-
-      return {
-        content: [
-          locale === "zh"
-            ? `${copy.responseLead}\n\n> ${subject}`
-            : `${copy.responseLead}\n\n> ${subject}`,
-          `\n\n**${copy.responseTitle}**\n\n`,
-          `1. ${copy.responsePoints[0]}\n`,
-          `2. ${copy.responsePoints[1]}\n`,
-          `3. ${copy.responsePoints[2]}\n\n`,
-          "```tsx\n<AgentShell composer={<PromptComposer onSubmit={send} />} />\n```\n\n",
-          copy.responseNote,
-        ].join(""),
-        reasoning: copy.reasoning,
-        steps: [
-          {
-            id: "intent",
-            title: copy.stepIntent,
-            status: "complete",
-            description: copy.stepIntentDescription,
-            startedAt: completedAt - 420,
-            completedAt: completedAt - 180,
-          },
-          {
-            id: "compose",
-            title: copy.stepCompose,
-            status: "complete",
-            description: copy.stepComposeDescription,
-            startedAt: completedAt - 170,
-            completedAt,
-          },
-        ],
-        metadata: { adapter: "velora-demo-mock" },
-      };
-    },
-  });
-}
-
 function useDemoAgent(conversationId: string, locale: Locale) {
-  const transport = useMemo(() => createDemoTransport(locale), [locale]);
+  const transport = useMemo(
+    () => createDemoTransport(locale, siteCopy[locale].agent),
+    [locale],
+  );
   const storeRef = useRef<ReturnType<typeof createAgentStore> | null>(null);
   if (!storeRef.current) {
     storeRef.current = createAgentStore({
       conversations: demoConversations,
-      messages: seededDemoMessages,
+      messages: getDemoMessages("en"),
     });
   }
 

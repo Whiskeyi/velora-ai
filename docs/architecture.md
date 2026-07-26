@@ -126,7 +126,9 @@ into `@velora-ai/react/rich-content.css` separately.
   transport implementation.
 - Put browser lifecycle logic behind a hook. The showcase keeps locale
   persistence in `app/showcase/use-showcase-locale.ts`, route construction in
-  `app/showcase/routing.ts`, and optional heavy modules in
-  `app/showcase/lazy-components.ts`.
+  `app/showcase/routing.ts`, optional heavy modules in
+  `app/showcase/lazy-components.ts`, deterministic data in
+  `app/showcase/demo-fixtures.ts`, and transport selection in
+  `app/showcase/demo-transport.ts`.
 - Update `scripts/verify-architecture.mjs` when a layer is intentionally added.
   Do not weaken a rule to accommodate a one-off import.

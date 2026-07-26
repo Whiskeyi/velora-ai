@@ -46,6 +46,27 @@ const runtimeDependencyRules = new Map([
     new Set(["runtime/agent-runtime.ts", "runtime/store.ts", "runtime/types.ts"]),
   ],
 ]);
+const showcaseSourceRoot = resolve("app/showcase");
+const showcaseClientPath = resolve("app/showcase-client.tsx");
+const showcaseHelperRules = new Map([
+  [
+    "demo-fixtures.ts",
+    new Set(["@velora-ai/react/runtime", "./model"]),
+  ],
+  [
+    "demo-transport.ts",
+    new Set(["@velora-ai/react/runtime", "./model"]),
+  ],
+  ["prop-description.ts", new Set(["./model"])],
+]);
+const requiredShowcaseClientModules = [
+  "./showcase/demo-fixtures",
+  "./showcase/demo-transport",
+  "./showcase/lazy-components",
+  "./showcase/prop-description",
+  "./showcase/routing",
+  "./showcase/use-showcase-locale",
+];
 
 async function collectSourceFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -148,7 +169,7 @@ const dependencyGraph = new Map(
   ]),
 );
 
-function assertAcyclic() {
+function assertAcyclic(graph, displayPath, label) {
   const visiting = new Set();
   const visited = new Set();
   const pathStack = [];
@@ -158,23 +179,23 @@ function assertAcyclic() {
     if (visiting.has(path)) {
       const cycleStart = pathStack.indexOf(path);
       const cycle = [...pathStack.slice(cycleStart), path]
-        .map((item) => packagePath(item))
+        .map((item) => displayPath(item))
         .join(" -> ");
-      throw new Error(`Package source contains a dependency cycle: ${cycle}`);
+      throw new Error(`${label} contains a dependency cycle: ${cycle}`);
     }
 
     visiting.add(path);
     pathStack.push(path);
-    for (const dependency of dependencyGraph.get(path) ?? []) visit(dependency);
+    for (const dependency of graph.get(path) ?? []) visit(dependency);
     pathStack.pop();
     visiting.delete(path);
     visited.add(path);
   }
 
-  for (const path of modules.keys()) visit(path);
+  for (const path of graph.keys()) visit(path);
 }
 
-assertAcyclic();
+assertAcyclic(dependencyGraph, packagePath, "Package source");
 
 for (const [modulePath, allowedDependencies] of runtimeDependencyRules) {
   const path = resolve(packageSourceRoot, modulePath);
@@ -328,6 +349,80 @@ for (const path of serverRouteFiles) {
   }
 }
 
+const showcaseSourcePaths = [
+  showcaseClientPath,
+  ...(await collectSourceFiles(showcaseSourceRoot)),
+];
+const showcaseModulePaths = new Set(showcaseSourcePaths);
+const showcaseModules = new Map(
+  await Promise.all(
+    showcaseSourcePaths.map(async (path) => {
+      const source = await readFile(path, "utf8");
+      const sourceFile = ts.createSourceFile(
+        path,
+        source,
+        ts.ScriptTarget.Latest,
+        true,
+        path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+      );
+      return [
+        path,
+        {
+          specifiers: readModuleSpecifiers(sourceFile),
+        },
+      ];
+    }),
+  ),
+);
+const showcaseDependencyGraph = new Map(
+  [...showcaseModules].map(([path, module]) => [
+    path,
+    module.specifiers
+      .filter((specifier) => specifier.startsWith("."))
+      .map((specifier) => resolveRelativeModule(path, specifier, showcaseModulePaths))
+      .filter(Boolean),
+  ]),
+);
+
+assertAcyclic(
+  showcaseDependencyGraph,
+  (path) => relative(resolve("app"), path).split(sep).join("/"),
+  "Showcase source",
+);
+
+const showcaseClient = showcaseModules.get(showcaseClientPath);
+for (const requiredModule of requiredShowcaseClientModules) {
+  if (!showcaseClient?.specifiers.includes(requiredModule)) {
+    throw new Error(
+      `app/showcase-client.tsx must compose ${requiredModule} instead of absorbing its responsibility.`,
+    );
+  }
+}
+
+for (const [helperPath, allowedSpecifiers] of showcaseHelperRules) {
+  const path = resolve(showcaseSourceRoot, helperPath);
+  const helper = showcaseModules.get(path);
+  if (!helper) {
+    throw new Error(`Showcase boundary references missing module ${helperPath}.`);
+  }
+  for (const specifier of helper.specifiers) {
+    if (!allowedSpecifiers.has(specifier)) {
+      throw new Error(
+        `app/showcase/${helperPath} must not depend on ${specifier}. Keep showcase infrastructure independent from page composition.`,
+      );
+    }
+  }
+}
+
+for (const [path, dependencies] of showcaseDependencyGraph) {
+  if (path === showcaseClientPath) continue;
+  if (dependencies.includes(showcaseClientPath)) {
+    throw new Error(
+      `${relative(resolve("."), path)} must not import the showcase composition root.`,
+    );
+  }
+}
+
 console.log(
-  `Verified an acyclic package graph, ${runtimeDependencyRules.size} runtime layer contracts, ${serverEntries.length} server-safe entry graphs, ${clientEntries.length} client entry directives, ${serverRouteFiles.length} server routes, and ${granularRichContentEntries.size} granular rich-content exports.`,
+  `Verified acyclic package and showcase graphs, ${runtimeDependencyRules.size} runtime layer contracts, ${showcaseHelperRules.size} showcase helper contracts, ${serverEntries.length} server-safe entry graphs, ${clientEntries.length} client entry directives, ${serverRouteFiles.length} server routes, and ${granularRichContentEntries.size} granular rich-content exports.`,
 );
