@@ -1,6 +1,6 @@
-import { fileURLToPath } from "node:url";
 import { defineConfig, lazyPlugins, type UserConfig } from "vite-plus";
 import hostingConfig from "./.openai/hosting.json";
+import { reactPackageAliases } from "./build/react-package-aliases";
 import { sites } from "./build/sites-vite-plugin";
 
 // Wrangler reads these paths while its Vite plugin module initializes.
@@ -20,54 +20,6 @@ const { d1, r2 } = hostingConfig;
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
-
-const reactPackageAliases = [
-  {
-    find: /^@velora-ai\/react\/rich-content\/code-block$/,
-    replacement: fileURLToPath(
-      new URL("./packages/react/src/code-block-entry.ts", import.meta.url),
-    ),
-  },
-  {
-    find: /^@velora-ai\/react\/rich-content\/formula$/,
-    replacement: fileURLToPath(
-      new URL("./packages/react/src/formula-entry.ts", import.meta.url),
-    ),
-  },
-  {
-    find: /^@velora-ai\/react\/rich-content\/markdown$/,
-    replacement: fileURLToPath(
-      new URL("./packages/react/src/markdown-entry.ts", import.meta.url),
-    ),
-  },
-  {
-    find: /^@velora-ai\/react\/rich-content\/mermaid$/,
-    replacement: fileURLToPath(
-      new URL("./packages/react/src/mermaid-entry.ts", import.meta.url),
-    ),
-  },
-  {
-    find: /^@velora-ai\/react\/rich-content$/,
-    replacement: fileURLToPath(
-      new URL(
-        "./packages/react/src/rich-content-entry.ts",
-        import.meta.url,
-      ),
-    ),
-  },
-  {
-    find: /^@velora-ai\/react\/styles\.css$/,
-    replacement: fileURLToPath(
-      new URL("./packages/react/src/velora.css", import.meta.url),
-    ),
-  },
-  {
-    find: /^@velora-ai\/react$/,
-    replacement: fileURLToPath(
-      new URL("./packages/react/src/index.ts", import.meta.url),
-    ),
-  },
-];
 
 const localBindingConfig = {
   main: "./worker/index.ts",

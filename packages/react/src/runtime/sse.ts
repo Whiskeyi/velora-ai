@@ -1,3 +1,5 @@
+import { throwIfAborted } from "./abort";
+
 export interface SSEFrame {
   readonly data: string;
   readonly event?: string;
@@ -7,21 +9,6 @@ export interface SSEFrame {
 
 export interface ParseSSEOptions {
   readonly signal?: AbortSignal;
-}
-
-function createAbortError(reason?: unknown): Error {
-  if (reason instanceof Error && reason.name === "AbortError") {
-    return reason;
-  }
-
-  const message = typeof reason === "string" ? reason : "The operation was aborted";
-  if (typeof DOMException !== "undefined") {
-    return new DOMException(message, "AbortError");
-  }
-
-  const error = new Error(message);
-  error.name = "AbortError";
-  return error;
 }
 
 /** Returns true for browser and cross-runtime abort errors. */
@@ -47,12 +34,6 @@ export async function* parseSSEStream(
   let lastEventId: string | undefined;
   let retry: number | undefined;
   let ended = false;
-
-  const throwIfAborted = (): void => {
-    if (signal?.aborted) {
-      throw createAbortError(signal.reason);
-    }
-  };
 
   const dispatch = (): SSEFrame | undefined => {
     if (dataLines.length === 0) {
@@ -148,10 +129,10 @@ export async function* parseSSEStream(
   signal?.addEventListener("abort", handleAbort, { once: true });
 
   try {
-    throwIfAborted();
+    throwIfAborted(signal);
     while (!ended) {
       const result = await reader.read();
-      throwIfAborted();
+      throwIfAborted(signal);
 
       if (result.done) {
         buffer += decoder.decode();

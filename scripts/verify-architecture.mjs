@@ -168,23 +168,19 @@ for (const entry of serverEntries) {
 }
 
 const richContentEntry = modules.get(resolve(packageSourceRoot, "rich-content-entry.ts"));
-const richComponentExports = new Set(
-  richContentEntry.specifiers.filter((specifier) => specifier.startsWith("./components")),
-);
-const expectedRichComponentExports = new Set([
-  "./components/CodeBlock",
-  "./components/Formula",
-  "./components/MarkdownRenderer",
-  "./components/MermaidDiagram",
+const richEntryExports = new Set(richContentEntry.specifiers);
+const expectedRichEntryExports = new Set([
+  "./code-block-entry",
+  "./formula-entry",
+  "./markdown-entry",
+  "./mermaid-entry",
 ]);
 
 if (
-  richComponentExports.size !== expectedRichComponentExports.size ||
-  [...richComponentExports].some((specifier) => !expectedRichComponentExports.has(specifier))
+  richEntryExports.size !== expectedRichEntryExports.size ||
+  [...richEntryExports].some((specifier) => !expectedRichEntryExports.has(specifier))
 ) {
-  throw new Error(
-    "rich-content-entry.ts must export the four rich components directly instead of traversing the full component barrel.",
-  );
+  throw new Error("rich-content-entry.ts must compose the four granular rich-content entrypoints.");
 }
 
 for (const [entry, expectedSpecifier] of granularRichContentEntries) {

@@ -7,6 +7,7 @@ import type {
   ChatRequest,
   JsonObject,
 } from "./types";
+import { createAbortError, throwIfAborted } from "./abort";
 
 export interface MockAgentResponse {
   readonly content: string;
@@ -50,25 +51,6 @@ export interface MockTransportOptions {
   readonly delayMs?: number | ((context: MockDelayContext) => number);
   /** Appends a done event to custom scripts that do not include one. */
   readonly autoDone?: boolean;
-}
-
-function createAbortError(reason?: unknown): Error {
-  if (reason instanceof Error && reason.name === "AbortError") {
-    return reason;
-  }
-  const message = typeof reason === "string" ? reason : "The operation was aborted";
-  if (typeof DOMException !== "undefined") {
-    return new DOMException(message, "AbortError");
-  }
-  const error = new Error(message);
-  error.name = "AbortError";
-  return error;
-}
-
-function throwIfAborted(signal?: AbortSignal): void {
-  if (signal?.aborted) {
-    throw createAbortError(signal.reason);
-  }
 }
 
 function wait(ms: number, signal?: AbortSignal): Promise<void> {

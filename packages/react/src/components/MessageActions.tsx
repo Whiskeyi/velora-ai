@@ -3,7 +3,6 @@ import {
   type HTMLAttributes,
   type ReactNode,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -15,6 +14,7 @@ import {
   errorMessage,
   type SemanticClassNames,
   type SemanticStyles,
+  writeClipboard,
 } from "./utils";
 
 export type MessageFeedback = "like" | "dislike" | null;
@@ -71,28 +71,6 @@ export interface MessageActionsProps extends Omit<
   dislikeIcon?: ReactNode;
   classNames?: SemanticClassNames<MessageActionsSlot>;
   styles?: SemanticStyles<MessageActionsSlot>;
-}
-
-async function writeClipboard(value: string): Promise<void> {
-  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(value);
-    return;
-  }
-
-  if (typeof document === "undefined" || typeof document.execCommand !== "function") {
-    throw new Error("Clipboard is unavailable");
-  }
-
-  const textarea = document.createElement("textarea");
-  textarea.value = value;
-  textarea.setAttribute("readonly", "");
-  textarea.style.position = "fixed";
-  textarea.style.opacity = "0";
-  document.body.appendChild(textarea);
-  textarea.select();
-  const copied = document.execCommand("copy");
-  textarea.remove();
-  if (!copied) throw new Error("Clipboard write failed");
 }
 
 function CopyIcon() {
@@ -190,14 +168,6 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
     const pendingRef = useRef<MessageActionKind | null>(null);
     const mountedRef = useRef(true);
     const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const mergedPendingLabels = useMemo(
-      () => ({ ...copy.pending, ...pendingLabels }),
-      [copy.pending, pendingLabels],
-    );
-    const mergedSuccessLabels = useMemo(
-      () => ({ ...copy.success, ...successLabels }),
-      [copy.success, successLabels],
-    );
 
     useEffect(() => {
       mountedRef.current = true;
@@ -209,7 +179,9 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
 
     const announceSuccess = (action: MessageActionKind) => {
       if (!mountedRef.current) return;
-      setStatus(action === "copy" ? resolvedCopiedLabel : mergedSuccessLabels[action]);
+      setStatus(
+        action === "copy" ? resolvedCopiedLabel : (successLabels?.[action] ?? copy.success[action]),
+      );
       if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
       statusTimerRef.current = setTimeout(() => {
         statusTimerRef.current = null;
@@ -230,7 +202,7 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
       pendingRef.current = action;
       setPendingAction(action);
       setActionError(null);
-      setStatus(mergedPendingLabels[action]);
+      setStatus(pendingLabels?.[action] ?? copy.pending[action]);
 
       try {
         await operation();
@@ -242,7 +214,10 @@ export const MessageActions = forwardRef<HTMLDivElement, MessageActionsProps>(
           setStatus(null);
           setActionError(
             errorLabel?.(error, context) ??
-              copy.actionFailed(mergedPendingLabels[action], errorMessage(error)),
+              copy.actionFailed(
+                pendingLabels?.[action] ?? copy.pending[action],
+                errorMessage(error),
+              ),
           );
           onActionError?.(error, context);
         }
