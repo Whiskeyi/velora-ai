@@ -1,5 +1,7 @@
 import { throwIfAborted } from "./abort";
 
+export { isAbortError } from "./abort";
+
 export interface SSEFrame {
   readonly data: string;
   readonly event?: string;
@@ -18,11 +20,6 @@ export class SSEIdleTimeoutError extends Error {
     super("The SSE stream stopped producing data");
     this.name = "SSEIdleTimeoutError";
   }
-}
-
-/** Returns true for browser and cross-runtime abort errors. */
-export function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === "AbortError";
 }
 
 /**

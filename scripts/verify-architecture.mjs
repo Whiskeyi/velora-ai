@@ -23,6 +23,29 @@ const granularRichContentEntries = new Map([
   ["markdown-entry.ts", "./components/MarkdownRenderer"],
   ["mermaid-entry.ts", "./components/MermaidDiagram"],
 ]);
+const runtimeDependencyRules = new Map([
+  ["runtime/types.ts", new Set()],
+  ["runtime/abort.ts", new Set()],
+  ["runtime/sse.ts", new Set(["runtime/abort.ts"])],
+  ["runtime/transport.ts", new Set(["runtime/sse.ts", "runtime/types.ts"])],
+  ["runtime/mock.ts", new Set(["runtime/abort.ts", "runtime/types.ts"])],
+  ["runtime/store.ts", new Set(["runtime/types.ts"])],
+  ["runtime/persistence.ts", new Set(["runtime/store.ts", "runtime/types.ts"])],
+  ["runtime/stream-events.ts", new Set(["runtime/store.ts", "runtime/types.ts"])],
+  [
+    "runtime/agent-runtime.ts",
+    new Set([
+      "runtime/abort.ts",
+      "runtime/store.ts",
+      "runtime/stream-events.ts",
+      "runtime/types.ts",
+    ]),
+  ],
+  [
+    "runtime/use-agent-chat.ts",
+    new Set(["runtime/agent-runtime.ts", "runtime/store.ts", "runtime/types.ts"]),
+  ],
+]);
 
 async function collectSourceFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -115,6 +138,89 @@ const modules = new Map(
     }),
   ),
 );
+const dependencyGraph = new Map(
+  [...modules].map(([path, module]) => [
+    path,
+    module.specifiers
+      .filter((specifier) => specifier.startsWith("."))
+      .map((specifier) => resolveRelativeModule(path, specifier, modulePaths))
+      .filter(Boolean),
+  ]),
+);
+
+function assertAcyclic() {
+  const visiting = new Set();
+  const visited = new Set();
+  const pathStack = [];
+
+  function visit(path) {
+    if (visited.has(path)) return;
+    if (visiting.has(path)) {
+      const cycleStart = pathStack.indexOf(path);
+      const cycle = [...pathStack.slice(cycleStart), path]
+        .map((item) => packagePath(item))
+        .join(" -> ");
+      throw new Error(`Package source contains a dependency cycle: ${cycle}`);
+    }
+
+    visiting.add(path);
+    pathStack.push(path);
+    for (const dependency of dependencyGraph.get(path) ?? []) visit(dependency);
+    pathStack.pop();
+    visiting.delete(path);
+    visited.add(path);
+  }
+
+  for (const path of modules.keys()) visit(path);
+}
+
+assertAcyclic();
+
+for (const [modulePath, allowedDependencies] of runtimeDependencyRules) {
+  const path = resolve(packageSourceRoot, modulePath);
+  const dependencies = dependencyGraph.get(path);
+  if (!dependencies) {
+    throw new Error(`Runtime boundary references missing module ${modulePath}.`);
+  }
+
+  for (const dependency of dependencies) {
+    const dependencyPath = packagePath(dependency);
+    if (
+      dependencyPath.startsWith("runtime/") &&
+      !allowedDependencies.has(dependencyPath)
+    ) {
+      throw new Error(
+        `${modulePath} must not depend on ${dependencyPath}. Update the runtime layer contract intentionally before crossing this boundary.`,
+      );
+    }
+  }
+}
+
+for (const [path, dependencies] of dependencyGraph) {
+  const sourcePath = packagePath(path);
+  if (!sourcePath.startsWith("components/") || sourcePath.includes(".test.")) continue;
+
+  for (const dependency of dependencies) {
+    const dependencyPath = packagePath(dependency);
+    if (dependencyPath.startsWith("runtime/") && dependencyPath !== "runtime/types.ts") {
+      throw new Error(
+        `${sourcePath} must consume runtime contracts from runtime/types.ts, not ${dependencyPath}.`,
+      );
+    }
+  }
+}
+
+const runtimeIndex = modules.get(resolve(packageSourceRoot, "runtime/index.ts"));
+if (runtimeIndex?.specifiers.includes("./use-agent-chat")) {
+  throw new Error(
+    "runtime/index.ts is the headless core barrel and must not export the React adapter.",
+  );
+}
+
+const rootIndex = modules.get(resolve(packageSourceRoot, "index.ts"));
+if (!rootIndex?.specifiers.includes("./runtime/use-agent-chat")) {
+  throw new Error("index.ts must compose the React adapter explicitly.");
+}
 
 for (const entry of clientEntries) {
   const path = resolve(packageSourceRoot, entry);
@@ -196,6 +302,32 @@ for (const [entry, expectedSpecifier] of granularRichContentEntries) {
   }
 }
 
+const routeRoots = [resolve("app"), resolve("examples")];
+const serverRouteFiles = (
+  await Promise.all(routeRoots.map((root) => collectSourceFiles(root)))
+)
+  .flat()
+  .filter((path) => path.endsWith(`${sep}route.ts`));
+
+for (const path of serverRouteFiles) {
+  const source = await readFile(path, "utf8");
+  const sourceFile = ts.createSourceFile(
+    path,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  if (
+    !hasClientDirective(sourceFile) &&
+    readModuleSpecifiers(sourceFile).includes("@velora-ai/react")
+  ) {
+    throw new Error(
+      `${relative(resolve("."), path)} is server code and must import a server-safe Velora subpath.`,
+    );
+  }
+}
+
 console.log(
-  `Verified ${serverEntries.length} server-safe entry graphs, ${clientEntries.length} client entry directives, and ${granularRichContentEntries.size} granular rich-content exports.`,
+  `Verified an acyclic package graph, ${runtimeDependencyRules.size} runtime layer contracts, ${serverEntries.length} server-safe entry graphs, ${clientEntries.length} client entry directives, ${serverRouteFiles.length} server routes, and ${granularRichContentEntries.size} granular rich-content exports.`,
 );

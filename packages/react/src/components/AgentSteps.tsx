@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { AgentStep, AgentStepStatus } from "../runtime";
+import type { AgentStep, AgentStepStatus } from "../runtime/types";
 import { StreamingIndicator } from "./StreamingIndicator";
 import { useComponentClass, useVelora } from "./VeloraProvider";
 import {

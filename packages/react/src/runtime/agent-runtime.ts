@@ -1,4 +1,4 @@
-import { isAbortError } from "./sse";
+import { isAbortError } from "./abort";
 import {
   createAgentStore,
   createVeloraId,
@@ -6,6 +6,7 @@ import {
   type AgentMessagePatch,
   type AgentStore,
 } from "./store";
+import { applyAgentStreamEvent } from "./stream-events";
 import {
   toAgentRequestMessage,
   type AgentError,
@@ -130,38 +131,6 @@ function toAgentError(error: unknown): AgentError {
   return {
     message: typeof error === "string" ? error : "The agent request failed",
   };
-}
-
-function mergeMetadata(
-  current: JsonObject | undefined,
-  next: JsonObject | undefined,
-): JsonObject | undefined {
-  if (!current) return next;
-  if (!next) return current;
-  return { ...current, ...next };
-}
-
-function completionMetadata(
-  event: Extract<AgentStreamEvent, { type: "done" }>,
-): JsonObject | undefined {
-  const usage = event.usage
-    ? {
-        ...(event.usage.inputTokens !== undefined ? { inputTokens: event.usage.inputTokens } : {}),
-        ...(event.usage.outputTokens !== undefined
-          ? { outputTokens: event.usage.outputTokens }
-          : {}),
-        ...(event.usage.totalTokens !== undefined ? { totalTokens: event.usage.totalTokens } : {}),
-      }
-    : undefined;
-  return mergeMetadata(
-    event.finishReason || usage
-      ? {
-          ...(event.finishReason ? { finishReason: event.finishReason } : {}),
-          ...(usage ? { usage } : {}),
-        }
-      : undefined,
-    event.metadata,
-  );
 }
 
 function notify<T>(callback: ((value: T) => void) | undefined, value: T): void {
@@ -507,124 +476,33 @@ class VeloraAgentRuntime implements AgentRuntime {
           flushPending();
         }
         notify(this.options.onEvent, event);
-        const actions = this.store.getState();
-        switch (event.type) {
-          case "start":
-            actions.setRunStatus(input.conversationId, input.requestId, "streaming");
-            actions.patchMessage(input.responseMessage.id, {
-              status: "streaming",
-              ...(event.messageId && event.messageId !== input.responseMessage.id
-                ? {
-                    metadata: mergeMetadata(
-                      actions.messagesById[input.responseMessage.id]?.metadata,
-                      { serverMessageId: event.messageId },
-                    ),
-                  }
-                : {}),
-            });
-            break;
+        const update = applyAgentStreamEvent(
+          this.store,
+          {
+            conversationId: input.conversationId,
+            requestId: input.requestId,
+            responseMessageId: input.responseMessage.id,
+          },
+          event,
+        );
+        switch (update.kind) {
           case "text-delta":
-            actions.setRunStatus(input.conversationId, input.requestId, "streaming");
-            pendingText += event.delta;
+            pendingText += update.delta;
             scheduleFlush();
             break;
           case "reasoning-delta":
-          case "reasoning-summary-delta":
-            actions.setRunStatus(input.conversationId, input.requestId, "streaming");
-            pendingReasoning += event.delta;
+            pendingReasoning += update.delta;
             scheduleFlush();
             break;
-          case "step":
-            actions.upsertStep(input.responseMessage.id, event.step);
+          case "warning":
+            notify(this.options.onWarning, update.error);
             break;
-          case "step-update":
-            actions.patchStep(input.responseMessage.id, event.stepId, event.patch);
-            break;
-          case "tool-call":
-            actions.upsertToolCall(input.responseMessage.id, event.toolCall);
-            if (event.toolCall.status === "approval-required") {
-              actions.setRunStatus(input.conversationId, input.requestId, "awaiting-approval");
-            } else if (event.toolCall.status === "running") {
-              actions.setRunStatus(input.conversationId, input.requestId, "running-tool");
-            }
-            break;
-          case "tool-call-update":
-            actions.patchToolCall(input.responseMessage.id, event.toolCallId, event.patch);
-            if (event.patch.status === "approval-required") {
-              actions.setRunStatus(input.conversationId, input.requestId, "awaiting-approval");
-            } else if (event.patch.status === "running") {
-              actions.setRunStatus(input.conversationId, input.requestId, "running-tool");
-            } else if (event.patch.status) {
-              actions.setRunStatus(input.conversationId, input.requestId, "streaming");
-            }
-            break;
-          case "message":
-            actions.patchMessage(input.responseMessage.id, {
-              content: event.message.content,
-              status: event.message.status,
-              ...(event.message.reasoning !== undefined
-                ? { reasoning: event.message.reasoning }
-                : {}),
-              ...(event.message.attachments !== undefined
-                ? { attachments: event.message.attachments }
-                : {}),
-              ...(event.message.steps !== undefined ? { steps: event.message.steps } : {}),
-              ...(event.message.toolCalls !== undefined
-                ? { toolCalls: event.message.toolCalls }
-                : {}),
-              ...(event.message.branch !== undefined ? { branch: event.message.branch } : {}),
-              ...(event.message.error !== undefined ? { error: event.message.error } : {}),
-              metadata: mergeMetadata(
-                actions.messagesById[input.responseMessage.id]?.metadata,
-                event.message.metadata,
-              ),
-            });
-            if (event.message.status === "error") {
-              const messageError = event.message.error ?? {
-                message: "The agent returned an error message",
-              };
-              if (event.message.error === undefined) {
-                actions.patchMessage(input.responseMessage.id, {
-                  error: messageError,
-                });
-              }
-              actions.finishRun(input.conversationId, input.requestId, messageError);
-              notify(this.options.onError, messageError);
-              outcome = "error";
-              terminal = true;
-            } else if (event.message.status === "aborted") {
-              actions.abortRun(input.conversationId, input.requestId);
-              outcome = "aborted";
-              terminal = true;
-            }
-            break;
-          case "metadata":
-            actions.patchMessage(input.responseMessage.id, (message) => ({
-              metadata: mergeMetadata(message.metadata, event.metadata),
-            }));
-            break;
-          case "error":
-            if (event.terminal === false) {
-              notify(this.options.onWarning, event.error);
-              break;
-            }
-            actions.patchMessage(input.responseMessage.id, {
-              status: "error",
-              error: event.error,
-            });
-            actions.finishRun(input.conversationId, input.requestId, event.error);
-            notify(this.options.onError, event.error);
-            outcome = "error";
+          case "terminal":
+            outcome = update.outcome;
             terminal = true;
+            if (update.error) notify(this.options.onError, update.error);
             break;
-          case "done":
-            actions.patchMessage(input.responseMessage.id, (message) => ({
-              status: "complete",
-              metadata: mergeMetadata(message.metadata, completionMetadata(event)),
-            }));
-            actions.finishRun(input.conversationId, input.requestId);
-            outcome = "complete";
-            terminal = true;
+          case "continue":
             break;
         }
         if (terminal) break;

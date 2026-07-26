@@ -9,7 +9,7 @@ import {
   useMemo,
   useRef,
 } from "react";
-import type { Conversation } from "../runtime";
+import type { Conversation } from "../runtime/types";
 import { useComponentClass, useVelora } from "./VeloraProvider";
 import {
   composeStyles,

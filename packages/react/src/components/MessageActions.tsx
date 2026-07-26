@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { AgentMessage } from "../runtime";
+import type { AgentMessage } from "../runtime/types";
 import { useComponentClass, useVelora } from "./VeloraProvider";
 import {
   composeStyles,

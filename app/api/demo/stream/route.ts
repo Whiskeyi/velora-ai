@@ -1,4 +1,4 @@
-import type { ChatRequest } from "@velora-ai/react";
+import type { ChatRequest } from "@velora-ai/react/runtime";
 
 const encoder = new TextEncoder();
 

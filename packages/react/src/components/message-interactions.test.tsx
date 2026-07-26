@@ -4,7 +4,7 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { AgentMessage } from "../runtime";
+import type { AgentMessage } from "../runtime/types";
 import { MessageActions } from "./MessageActions";
 import { MessageBranchNavigator } from "./MessageBranchNavigator";
 import { MessageBubble } from "./MessageBubble";

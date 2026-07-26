@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { AgentMessage } from "../runtime";
+import type { AgentMessage } from "../runtime/types";
 import { MessageBubble } from "./MessageBubble";
 import { useComponentClass, useVelora } from "./VeloraProvider";
 import { assignRef, cx, useMediaQuery } from "./utils";

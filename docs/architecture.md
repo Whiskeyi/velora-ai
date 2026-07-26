@@ -1,7 +1,61 @@
 # Architecture
 
-Velora separates the AI data plane from the presentation plane. A product can
-replace either side without rewriting the other.
+Velora separates protocol, state, orchestration, React bindings, and
+presentation. A product can replace its transport or UI without rewriting the
+runtime, and server code can use the headless entry without pulling React into
+the dependency graph.
+
+## Layer map
+
+The arrows below mean “may depend on”. Dependencies only move from the outer
+layers toward stable inner contracts.
+
+```mermaid
+flowchart LR
+  App["Showcase / product app"] --> Components["React components"]
+  App --> Hooks["React hooks"]
+  Components --> Contracts["Runtime contracts"]
+  Hooks --> Runtime["Agent runtime"]
+  Runtime --> Events["Stream event reducer"]
+  Runtime --> Transport["Transport and SSE"]
+  Runtime --> State["Normalized store"]
+  Events --> State
+  Events --> Contracts
+  Transport --> Contracts
+  State --> Contracts
+```
+
+| Layer | Source | Owns | Must not own |
+| --- | --- | --- | --- |
+| Contracts | `runtime/types.ts` | Messages, events, request and tool types | I/O, React, mutable state |
+| Wire | `runtime/abort.ts`, `sse.ts`, `transport.ts`, `mock.ts` | Abort semantics, SSE decoding, provider adapters | UI state or React |
+| State | `runtime/store.ts`, `persistence.ts` | Normalized entities, selectors, persistence | Network requests |
+| Event reduction | `runtime/stream-events.ts` | Pure event-to-state transitions | Stream iteration or component effects |
+| Orchestration | `runtime/agent-runtime.ts` | Run lifecycle, batching, cancellation and callbacks | JSX or hook lifecycle |
+| React adapter | `runtime/use-agent-chat.ts` | Runtime subscription and hook ergonomics | Transport parsing |
+| Components | `components/` | Accessible interaction and presentation | Request orchestration |
+| Showcase | `app/`, `app/showcase/` | Documentation, examples and live editor composition | Private package imports |
+
+These contracts are checked by `npm run verify:architecture`. The verifier
+rejects source cycles, illegal runtime edges, component imports that bypass
+`runtime/types.ts`, server routes that import the client root, and accidental
+React dependencies in server-safe entrypoints.
+
+## Public entrypoints
+
+Use the narrowest entrypoint that matches the caller:
+
+| Import | Environment | Purpose |
+| --- | --- | --- |
+| `@velora-ai/react` | Client | Convenience entry for components, hooks and runtime |
+| `@velora-ai/react/components` | Client | UI primitives only |
+| `@velora-ai/react/hooks` | Client | React adapters only |
+| `@velora-ai/react/runtime` | Server or client | Headless runtime, store and public contracts |
+| `@velora-ai/react/transport` | Server or client | SSE and mock transports |
+| `@velora-ai/react/rich-content/*` | Client | Independently loadable code, formula, Markdown or Mermaid renderer |
+
+Server handlers should import public request and event types from
+`@velora-ai/react/runtime`, never from the client convenience entry.
 
 ## Data flow
 
@@ -12,8 +66,10 @@ and prototypes. The React hook consumes either transport and commits normalized
 changes to the store. Components subscribe only to the slices they render.
 
 Events distinguish assistant text, reasoning, steps, typed tool calls, metadata,
-recoverable warnings, terminal usage, and failures. This prevents UI code from parsing provider-specific
-payloads and makes abort/retry behavior deterministic.
+recoverable warnings, terminal usage, and failures. This prevents UI code from
+parsing provider-specific payloads and makes abort/retry behavior deterministic.
+`applyAgentStreamEvent` performs the deterministic event transition; the runtime
+is responsible only for consuming the stream and scheduling commits.
 `createAgentRuntime` owns requests independently of React; `useAgentChat`
 subscribes a view to one conversation and does not stop a run merely because
 that view unmounts.
@@ -59,3 +115,18 @@ into a more expressive liquid-glass surface. Velora-owned CSS selectors use
 the `vl-` prefix and never target consumer element names globally. Base
 component styles do not load KaTeX fonts; products that render formulas opt
 into `@velora-ai/react/rich-content.css` separately.
+
+## Maintainer rules
+
+- Add new protocol fields to `runtime/types.ts` before implementing adapters.
+- Keep provider-specific payload decoding inside a transport adapter.
+- Express state transitions in `stream-events.ts`; keep stream scheduling and
+  callbacks in `agent-runtime.ts`.
+- Components may import runtime contracts, but never the store, runtime, or
+  transport implementation.
+- Put browser lifecycle logic behind a hook. The showcase keeps locale
+  persistence in `app/showcase/use-showcase-locale.ts`, route construction in
+  `app/showcase/routing.ts`, and optional heavy modules in
+  `app/showcase/lazy-components.ts`.
+- Update `scripts/verify-architecture.mjs` when a layer is intentionally added.
+  Do not weaken a rule to accommodate a one-off import.

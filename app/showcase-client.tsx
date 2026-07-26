@@ -51,7 +51,6 @@ import {
 import {
   Fragment,
   Suspense,
-  lazy,
   memo,
   type ReactNode,
   useCallback,
@@ -66,45 +65,23 @@ import {
   COMPONENT_API_SPECS,
   COMPONENT_DOCS,
 } from "./showcase/component-docs";
+import {
+  CodeBlock,
+  Formula,
+  LiveEditor,
+  LiveError,
+  LivePreview,
+  LiveProvider,
+  MarkdownRenderer,
+  MermaidDiagram,
+} from "./showcase/lazy-components";
 import type { ComponentDoc, Locale, ViewportKey } from "./showcase/model";
+import { getComponentHref, getHomeHref } from "./showcase/routing";
 import { loadShowcaseSample, SHOWCASE_SAMPLE_BY_KEY, SHOWCASE_SAMPLES } from "./showcase/samples";
-
-const CodeBlock = lazy(() =>
-  import("@velora-ai/react/rich-content/code-block").then((module) => ({
-    default: module.CodeBlock,
-  })),
-);
-const Formula = lazy(() =>
-  import("@velora-ai/react/rich-content/formula").then((module) => ({
-    default: module.Formula,
-  })),
-);
-const MarkdownRenderer = lazy(() =>
-  import("@velora-ai/react/rich-content/markdown").then((module) => ({
-    default: module.MarkdownRenderer,
-  })),
-);
-const MermaidDiagram = lazy(() =>
-  import("@velora-ai/react/rich-content/mermaid").then((module) => ({
-    default: module.MermaidDiagram,
-  })),
-);
+import { useShowcaseLocale } from "./showcase/use-showcase-locale";
 
 export { COMPONENT_KEYS, isSampleKey };
 export type { SampleKey };
-
-const LiveProvider = lazy(() =>
-  import("react-live").then((module) => ({ default: module.LiveProvider })),
-);
-const LiveEditor = lazy(() =>
-  import("react-live").then((module) => ({ default: module.LiveEditor })),
-);
-const LiveError = lazy(() =>
-  import("react-live").then((module) => ({ default: module.LiveError })),
-);
-const LivePreview = lazy(() =>
-  import("react-live").then((module) => ({ default: module.LivePreview })),
-);
 
 const localeNames: Record<Locale, string> = {
   en: "English",
@@ -597,15 +574,6 @@ const demoConversationCopy: Record<
   },
 };
 
-function getInitialLocale(): Locale {
-  if (typeof window === "undefined") return "en";
-  const requested = new URLSearchParams(window.location.search).get("lang");
-  if (requested === "en" || requested === "zh") return requested;
-  const saved = window.localStorage.getItem("velora-locale");
-  if (saved === "en" || saved === "zh") return saved;
-  return window.navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
-}
-
 function localizeConversations<T extends (typeof demoConversations)[number]>(
   conversations: readonly T[],
   locale: Locale,
@@ -764,22 +732,6 @@ function getDemoSteps(locale: Locale) {
     { id: "patterns", title: "Compare patterns", status: "complete" as const },
     { id: "compose", title: "Compose response", status: "running" as const },
   ];
-}
-
-function getSiteBasePath(): string {
-  if (typeof window === "undefined") return "";
-  return window.location.pathname === "/velora-ai" ||
-    window.location.pathname.startsWith("/velora-ai/")
-    ? "/velora-ai"
-    : "";
-}
-
-function getHomeHref(fragment = ""): string {
-  return `${getSiteBasePath()}/${fragment}`;
-}
-
-function getComponentHref(key: SampleKey): string {
-  return `${getSiteBasePath()}/components/${key}/`;
 }
 
 function BrandMark() {
@@ -2375,27 +2327,6 @@ function Footer({ locale, homeHref = "" }: { locale: Locale; homeHref?: string }
       </div>
     </footer>
   );
-}
-
-function useShowcaseLocale() {
-  const [locale, setLocale] = useState<Locale>("en");
-  const [localeReady, setLocaleReady] = useState(false);
-
-  useEffect(() => {
-    setLocale(getInitialLocale());
-    setLocaleReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!localeReady) return;
-    window.localStorage.setItem("velora-locale", locale);
-    document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
-    const url = new URL(window.location.href);
-    url.searchParams.set("lang", locale);
-    window.history.replaceState(window.history.state, "", url);
-  }, [locale, localeReady]);
-
-  return { locale, setLocale };
 }
 
 function ShowcaseTheme({ children, locale }: { children: ReactNode; locale: Locale }) {

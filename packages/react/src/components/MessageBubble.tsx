@@ -1,5 +1,5 @@
 import { forwardRef, memo, type HTMLAttributes, type ReactNode } from "react";
-import type { AgentMessage } from "../runtime";
+import type { AgentMessage } from "../runtime/types";
 import { StreamingIndicator } from "./StreamingIndicator";
 import { useComponentClass, useVelora } from "./VeloraProvider";
 import {

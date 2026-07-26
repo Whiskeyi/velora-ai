@@ -4,7 +4,7 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { AgentMessage, Conversation } from "../runtime";
+import type { AgentMessage, Conversation } from "../runtime/types";
 import { AgentShell } from "./AgentShell";
 import { AgentSteps } from "./AgentSteps";
 import { CodeBlock } from "./CodeBlock";
