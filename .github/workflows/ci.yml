@@ -25,7 +25,7 @@ jobs:
       - run: npm run build:library
       - run: npm run verify:package
       - run: npm run verify:release
-      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run audit:production
       - run: npm run verify:showcase
       - run: npm pack --dry-run --workspace @velora-ai/react
       - run: vp build
