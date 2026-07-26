@@ -24,6 +24,10 @@ export const reactPackageAliases = [
     replacement: fromProjectRoot("packages/react/src/rich-content-entry.ts"),
   },
   {
+    find: /^@velora-ai\/react\/rich-content\.css$/,
+    replacement: fromProjectRoot("packages/react/src/rich-content.css"),
+  },
+  {
     find: /^@velora-ai\/react\/styles\.css$/,
     replacement: fromProjectRoot("packages/react/src/velora.css"),
   },

@@ -14,6 +14,9 @@ changes to the store. Components subscribe only to the slices they render.
 Events distinguish assistant text, reasoning, steps, typed tool calls, metadata,
 recoverable warnings, terminal usage, and failures. This prevents UI code from parsing provider-specific
 payloads and makes abort/retry behavior deterministic.
+`createAgentRuntime` owns requests independently of React; `useAgentChat`
+subscribes a view to one conversation and does not stop a run merely because
+that view unmounts.
 
 ## State ownership
 
@@ -53,5 +56,6 @@ focus, and a reduced-motion fallback.
 `VeloraProvider` publishes design tokens through CSS custom properties. The
 default theme is neutral and product-safe; the showcase composes those tokens
 into a more expressive liquid-glass surface. Velora-owned CSS selectors use
-the `vl-` prefix and never target consumer element names globally. The bundled
-KaTeX stylesheet is the explicit third-party exception.
+the `vl-` prefix and never target consumer element names globally. Base
+component styles do not load KaTeX fonts; products that render formulas opt
+into `@velora-ai/react/rich-content.css` separately.

@@ -3,6 +3,7 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 import type {
   AgentError,
   AgentMessage,
+  AgentRunStatus,
   AgentStep,
   AgentToolCall,
   Conversation,
@@ -14,7 +15,7 @@ import type {
 export interface AgentRunState {
   readonly requestId: string;
   readonly responseMessageId: string;
-  readonly status: "streaming" | "error";
+  readonly status: AgentRunStatus;
   readonly startedAt: number;
   readonly error?: AgentError;
 }
@@ -32,9 +33,7 @@ export interface AgentStoreData {
   readonly messagesById: Readonly<Record<string, AgentMessage>>;
   readonly conversationOrder: readonly string[];
   readonly messageVersionByConversation: Readonly<Record<string, number>>;
-  readonly lastChangedMessageIdByConversation: Readonly<
-    Partial<Record<string, string>>
-  >;
+  readonly lastChangedMessageIdByConversation: Readonly<Partial<Record<string, string>>>;
   readonly runsByConversation: Readonly<Record<string, AgentRunState>>;
   readonly activeConversationId: string | null;
 }
@@ -48,9 +47,7 @@ export interface AgentStoreActions {
   appendMessages(messages: readonly AgentMessage[]): void;
   patchMessage(
     messageId: string,
-    patch:
-      | AgentMessagePatch
-      | ((message: AgentMessage) => AgentMessagePatch),
+    patch: AgentMessagePatch | ((message: AgentMessage) => AgentMessagePatch),
   ): void;
   removeMessage(messageId: string): void;
   appendMessageText(messageId: string, delta: string): void;
@@ -60,11 +57,7 @@ export interface AgentStoreActions {
     deltas: { readonly text?: string; readonly reasoning?: string },
   ): void;
   upsertStep(messageId: string, step: AgentStep): void;
-  patchStep(
-    messageId: string,
-    stepId: string,
-    patch: Partial<Omit<AgentStep, "id">>,
-  ): void;
+  patchStep(messageId: string, stepId: string, patch: Partial<Omit<AgentStep, "id">>): void;
   upsertToolCall(messageId: string, toolCall: AgentToolCall): void;
   patchToolCall(
     messageId: string,
@@ -72,11 +65,12 @@ export interface AgentStoreActions {
     patch: Partial<Omit<AgentToolCall, "id">>,
   ): void;
   beginRun(conversationId: string, run: Omit<AgentRunState, "status">): boolean;
-  finishRun(
+  setRunStatus(
     conversationId: string,
     requestId: string,
-    error?: AgentError,
+    status: Exclude<AgentRunStatus, "error">,
   ): void;
+  finishRun(conversationId: string, requestId: string, error?: AgentError): void;
   abortRun(conversationId: string, requestId: string): void;
 }
 
@@ -103,10 +97,7 @@ export function createVeloraId(kind: VeloraIdKind): string {
   return `velora-${kind}-${Date.now().toString(36)}-${fallbackId.toString(36)}`;
 }
 
-function deleteKey<T>(
-  source: Readonly<Record<string, T>>,
-  key: string,
-): Record<string, T> {
+function deleteKey<T>(source: Readonly<Record<string, T>>, key: string): Record<string, T> {
   const result = { ...source };
   delete result[key];
   return result;
@@ -120,9 +111,7 @@ function createInitialData(options: CreateAgentStoreOptions): AgentStoreData {
       throw new Error(`Duplicate conversation id: ${conversation.id}`);
     }
     if (new Set(conversation.messageIds).size !== conversation.messageIds.length) {
-      throw new Error(
-        `Conversation ${conversation.id} contains duplicate message ids`,
-      );
+      throw new Error(`Conversation ${conversation.id} contains duplicate message ids`);
     }
     conversationsById[conversation.id] = {
       ...conversation,
@@ -158,9 +147,7 @@ function createInitialData(options: CreateAgentStoreOptions): AgentStoreData {
     for (const messageId of conversation.messageIds) {
       const message = messagesById[messageId];
       if (!message || message.conversationId !== conversation.id) {
-        throw new Error(
-          `Conversation ${conversation.id} references invalid message ${messageId}`,
-        );
+        throw new Error(`Conversation ${conversation.id} references invalid message ${messageId}`);
       }
     }
   }
@@ -174,9 +161,7 @@ function createInitialData(options: CreateAgentStoreOptions): AgentStoreData {
     conversationsById,
     messagesById,
     conversationOrder,
-    messageVersionByConversation: Object.fromEntries(
-      conversationOrder.map((id) => [id, 0]),
-    ),
+    messageVersionByConversation: Object.fromEntries(conversationOrder.map((id) => [id, 0])),
     lastChangedMessageIdByConversation: {},
     runsByConversation: {},
     activeConversationId,
@@ -184,9 +169,7 @@ function createInitialData(options: CreateAgentStoreOptions): AgentStoreData {
 }
 
 /** Creates an isolated, normalized Zustand vanilla store. */
-export function createAgentStore(
-  options: CreateAgentStoreOptions = {},
-): AgentStore {
+export function createAgentStore(options: CreateAgentStoreOptions = {}): AgentStore {
   const now = options.now ?? Date.now;
   const idFactory = options.idFactory ?? createVeloraId;
   const initialData = createInitialData(options);
@@ -257,14 +240,9 @@ export function createAgentStore(
         }
         return {
           ...state,
-          conversationsById: deleteKey(
-            state.conversationsById,
-            conversationId,
-          ),
+          conversationsById: deleteKey(state.conversationsById, conversationId),
           messagesById,
-          conversationOrder: state.conversationOrder.filter(
-            (id) => id !== conversationId,
-          ),
+          conversationOrder: state.conversationOrder.filter((id) => id !== conversationId),
           messageVersionByConversation: deleteKey(
             state.messageVersionByConversation,
             conversationId,
@@ -273,14 +251,9 @@ export function createAgentStore(
             state.lastChangedMessageIdByConversation,
             conversationId,
           ),
-          runsByConversation: deleteKey(
-            state.runsByConversation,
-            conversationId,
-          ),
+          runsByConversation: deleteKey(state.runsByConversation, conversationId),
           activeConversationId:
-            state.activeConversationId === conversationId
-              ? null
-              : state.activeConversationId,
+            state.activeConversationId === conversationId ? null : state.activeConversationId,
         };
       });
     },
@@ -308,17 +281,13 @@ export function createAgentStore(
           messagesById,
           messageVersionByConversation: {
             ...state.messageVersionByConversation,
-            [conversationId]:
-              (state.messageVersionByConversation[conversationId] ?? 0) + 1,
+            [conversationId]: (state.messageVersionByConversation[conversationId] ?? 0) + 1,
           },
           lastChangedMessageIdByConversation: deleteKey(
             state.lastChangedMessageIdByConversation,
             conversationId,
           ),
-          runsByConversation: deleteKey(
-            state.runsByConversation,
-            conversationId,
-          ),
+          runsByConversation: deleteKey(state.runsByConversation, conversationId),
         };
       });
     },
@@ -388,8 +357,7 @@ export function createAgentStore(
         if (!message) {
           return state;
         }
-        const resolvedPatch =
-          typeof patch === "function" ? patch(message) : patch;
+        const resolvedPatch = typeof patch === "function" ? patch(message) : patch;
         const updatedMessage: AgentMessage = {
           ...message,
           ...resolvedPatch,
@@ -407,8 +375,7 @@ export function createAgentStore(
           messageVersionByConversation: {
             ...state.messageVersionByConversation,
             [message.conversationId]:
-              (state.messageVersionByConversation[message.conversationId] ?? 0) +
-              1,
+              (state.messageVersionByConversation[message.conversationId] ?? 0) + 1,
           },
           lastChangedMessageIdByConversation: {
             ...state.lastChangedMessageIdByConversation,
@@ -433,9 +400,7 @@ export function createAgentStore(
                 ...state.conversationsById,
                 [conversation.id]: {
                   ...conversation,
-                  messageIds: conversation.messageIds.filter(
-                    (id) => id !== messageId,
-                  ),
+                  messageIds: conversation.messageIds.filter((id) => id !== messageId),
                   updatedAt: now(),
                 },
               }
@@ -443,8 +408,7 @@ export function createAgentStore(
           messageVersionByConversation: {
             ...state.messageVersionByConversation,
             [message.conversationId]:
-              (state.messageVersionByConversation[message.conversationId] ?? 0) +
-              1,
+              (state.messageVersionByConversation[message.conversationId] ?? 0) + 1,
           },
           lastChangedMessageIdByConversation: {
             ...state.lastChangedMessageIdByConversation,
@@ -476,8 +440,7 @@ export function createAgentStore(
           messageVersionByConversation: {
             ...state.messageVersionByConversation,
             [message.conversationId]:
-              (state.messageVersionByConversation[message.conversationId] ?? 0) +
-              1,
+              (state.messageVersionByConversation[message.conversationId] ?? 0) + 1,
           },
           lastChangedMessageIdByConversation: {
             ...state.lastChangedMessageIdByConversation,
@@ -509,8 +472,7 @@ export function createAgentStore(
           messageVersionByConversation: {
             ...state.messageVersionByConversation,
             [message.conversationId]:
-              (state.messageVersionByConversation[message.conversationId] ?? 0) +
-              1,
+              (state.messageVersionByConversation[message.conversationId] ?? 0) + 1,
           },
           lastChangedMessageIdByConversation: {
             ...state.lastChangedMessageIdByConversation,
@@ -535,9 +497,7 @@ export function createAgentStore(
             ...state.messagesById,
             [messageId]: {
               ...message,
-              ...(deltas.text
-                ? { content: message.content + deltas.text }
-                : {}),
+              ...(deltas.text ? { content: message.content + deltas.text } : {}),
               ...(deltas.reasoning
                 ? {
                     reasoning: (message.reasoning ?? "") + deltas.reasoning,
@@ -549,8 +509,7 @@ export function createAgentStore(
           messageVersionByConversation: {
             ...state.messageVersionByConversation,
             [message.conversationId]:
-              (state.messageVersionByConversation[message.conversationId] ?? 0) +
-              1,
+              (state.messageVersionByConversation[message.conversationId] ?? 0) + 1,
           },
           lastChangedMessageIdByConversation: {
             ...state.lastChangedMessageIdByConversation,
@@ -582,8 +541,7 @@ export function createAgentStore(
           messageVersionByConversation: {
             ...state.messageVersionByConversation,
             [message.conversationId]:
-              (state.messageVersionByConversation[message.conversationId] ?? 0) +
-              1,
+              (state.messageVersionByConversation[message.conversationId] ?? 0) + 1,
           },
           lastChangedMessageIdByConversation: {
             ...state.lastChangedMessageIdByConversation,
@@ -615,8 +573,7 @@ export function createAgentStore(
           messageVersionByConversation: {
             ...state.messageVersionByConversation,
             [message.conversationId]:
-              (state.messageVersionByConversation[message.conversationId] ?? 0) +
-              1,
+              (state.messageVersionByConversation[message.conversationId] ?? 0) + 1,
           },
           lastChangedMessageIdByConversation: {
             ...state.lastChangedMessageIdByConversation,
@@ -631,9 +588,7 @@ export function createAgentStore(
         const message = state.messagesById[messageId];
         if (!message) return state;
         const toolCalls = [...(message.toolCalls ?? [])];
-        const index = toolCalls.findIndex(
-          (candidate) => candidate.id === toolCall.id,
-        );
+        const index = toolCalls.findIndex((candidate) => candidate.id === toolCall.id);
         if (index === -1) toolCalls.push(toolCall);
         else toolCalls[index] = { ...toolCalls[index], ...toolCall };
         return {
@@ -645,8 +600,7 @@ export function createAgentStore(
           messageVersionByConversation: {
             ...state.messageVersionByConversation,
             [message.conversationId]:
-              (state.messageVersionByConversation[message.conversationId] ?? 0) +
-              1,
+              (state.messageVersionByConversation[message.conversationId] ?? 0) + 1,
           },
           lastChangedMessageIdByConversation: {
             ...state.lastChangedMessageIdByConversation,
@@ -659,9 +613,7 @@ export function createAgentStore(
     patchToolCall(messageId, toolCallId, patch) {
       set((state) => {
         const message = state.messagesById[messageId];
-        const index =
-          message?.toolCalls?.findIndex((toolCall) => toolCall.id === toolCallId) ??
-          -1;
+        const index = message?.toolCalls?.findIndex((toolCall) => toolCall.id === toolCallId) ?? -1;
         if (!message?.toolCalls || index === -1) return state;
         const toolCalls = [...message.toolCalls];
         const current = toolCalls[index];
@@ -676,8 +628,7 @@ export function createAgentStore(
           messageVersionByConversation: {
             ...state.messageVersionByConversation,
             [message.conversationId]:
-              (state.messageVersionByConversation[message.conversationId] ?? 0) +
-              1,
+              (state.messageVersionByConversation[message.conversationId] ?? 0) + 1,
           },
           lastChangedMessageIdByConversation: {
             ...state.lastChangedMessageIdByConversation,
@@ -692,7 +643,8 @@ export function createAgentStore(
       set((state) => {
         if (
           !state.conversationsById[conversationId] ||
-          state.runsByConversation[conversationId]?.status === "streaming"
+          (state.runsByConversation[conversationId] &&
+            state.runsByConversation[conversationId]?.status !== "error")
         ) {
           return state;
         }
@@ -706,6 +658,22 @@ export function createAgentStore(
         };
       });
       return started;
+    },
+
+    setRunStatus(conversationId, requestId, status) {
+      set((state) => {
+        const run = state.runsByConversation[conversationId];
+        if (!run || run.requestId !== requestId || run.status === "error") {
+          return state;
+        }
+        return {
+          ...state,
+          runsByConversation: {
+            ...state.runsByConversation,
+            [conversationId]: { ...run, status },
+          },
+        };
+      });
     },
 
     finishRun(conversationId, requestId, error) {
@@ -734,10 +702,7 @@ export function createAgentStore(
         }
         return {
           ...state,
-          runsByConversation: deleteKey(
-            state.runsByConversation,
-            conversationId,
-          ),
+          runsByConversation: deleteKey(state.runsByConversation, conversationId),
         };
       });
     },
@@ -746,28 +711,31 @@ export function createAgentStore(
 
 const EMPTY_MESSAGES: readonly AgentMessage[] = Object.freeze([]);
 
-export const selectConversation = (conversationId: string) =>
+export const selectConversation =
+  (conversationId: string) =>
   (state: AgentStoreState): Conversation | undefined =>
     state.conversationsById[conversationId];
 
-export const selectMessage = (messageId: string) =>
+export const selectMessage =
+  (messageId: string) =>
   (state: AgentStoreState): AgentMessage | undefined =>
     state.messagesById[messageId];
 
-export const selectRun = (conversationId: string) =>
+export const selectRun =
+  (conversationId: string) =>
   (state: AgentStoreState): AgentRunState | undefined =>
     state.runsByConversation[conversationId];
 
-export const selectIsStreaming = (conversationId: string) =>
+export const selectIsStreaming =
+  (conversationId: string) =>
   (state: AgentStoreState): boolean =>
-    state.runsByConversation[conversationId]?.status === "streaming";
+    Boolean(
+      state.runsByConversation[conversationId] &&
+      state.runsByConversation[conversationId]?.status !== "error",
+    );
 
-export const selectActiveConversation = (
-  state: AgentStoreState,
-): Conversation | undefined =>
-  state.activeConversationId
-    ? state.conversationsById[state.activeConversationId]
-    : undefined;
+export const selectActiveConversation = (state: AgentStoreState): Conversation | undefined =>
+  state.activeConversationId ? state.conversationsById[state.activeConversationId] : undefined;
 
 /** Memoized selector for ordered session navigation. */
 export function selectConversations() {
@@ -779,8 +747,7 @@ export function selectConversations() {
       state.conversationOrder === previousOrder &&
       state.conversationOrder.length === previousConversations.length &&
       state.conversationOrder.every(
-        (id, index) =>
-          state.conversationsById[id] === previousConversations[index],
+        (id, index) => state.conversationsById[id] === previousConversations[index],
       )
     ) {
       return previousConversations;
@@ -817,11 +784,9 @@ export function selectConversationMessages(conversationId: string) {
 
     if (ids === previousIds && ids.length === previousMessages.length) {
       if (version === previousVersion) return previousMessages;
-      const changedId =
-        state.lastChangedMessageIdByConversation[conversationId];
+      const changedId = state.lastChangedMessageIdByConversation[conversationId];
       const changedIndex = changedId ? indexById.get(changedId) : undefined;
-      const changedMessage =
-        changedId !== undefined ? state.messagesById[changedId] : undefined;
+      const changedMessage = changedId !== undefined ? state.messagesById[changedId] : undefined;
       if (changedIndex !== undefined && changedMessage) {
         const nextMessages = [...previousMessages];
         nextMessages[changedIndex] = changedMessage;

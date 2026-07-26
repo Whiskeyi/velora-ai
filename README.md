@@ -30,14 +30,14 @@ Velora 不是一个固定聊天模板，而是一套可组合的 AI 交互组件
 
 ## What is included
 
-| Area | Public API |
-| --- | --- |
-| Layout and theme | `AgentShell`, `VeloraProvider` |
-| Sessions and drafts | `ConversationList`, `usePromptDrafts` |
-| Conversation | `MessageList`, `MessageBubble`, `MessageActions`, `MessageBranchNavigator`, `PromptComposer` |
-| Agent process | `ReasoningPanel`, `AgentSteps`, `ToolCallCard`, `StreamingIndicator` |
-| Rich output | `MarkdownRenderer`, `CodeBlock`, `Formula`, `MermaidDiagram` |
-| Runtime | `useAgentChat`, isolated Zustand store, reconnectable SSE and deterministic mock transports |
+| Area                | Public API                                                                                   |
+| ------------------- | -------------------------------------------------------------------------------------------- |
+| Layout and theme    | `AgentShell`, `VeloraProvider`                                                               |
+| Sessions and drafts | `ConversationList`, `usePromptDrafts`                                                        |
+| Conversation        | `MessageList`, `MessageBubble`, `MessageActions`, `MessageBranchNavigator`, `PromptComposer` |
+| Agent process       | `ReasoningPanel`, `AgentSteps`, `ToolCallCard`, `StreamingIndicator`                         |
+| Rich output         | `MarkdownRenderer`, `CodeBlock`, `Formula`, `MermaidDiagram`                                 |
+| Runtime             | `useAgentChat`, isolated Zustand store, reconnectable SSE and deterministic mock transports  |
 
 The runtime normalizes `start`, text/reasoning deltas, steps, tool calls,
 messages, metadata, recoverable warnings, and terminal events.
@@ -90,6 +90,8 @@ import {
   type PromptSubmitResult,
 } from "@velora-ai/react";
 import "@velora-ai/react/styles.css";
+// Add only when rendering formulas or math-enabled Markdown.
+import "@velora-ai/react/rich-content.css";
 
 const transport = createSSETransport({ url: "/api/agent" });
 
@@ -125,7 +127,7 @@ export function AgentSurface() {
         draft={draft}
         onDraftChange={setDraft}
         onSubmit={submit}
-        runStatus={chat.status}
+        runStatus={chat.isStreaming ? "streaming" : chat.status === "error" ? "error" : "idle"}
         onStop={() => {
           chat.stop();
         }}
@@ -175,15 +177,19 @@ function WorkspaceComposer({ activeId }: { activeId: string }) {
         draft={getDraft(activeId)}
         onDraftChange={(next) => setDraft(activeId, next)}
         onSubmit={submit}
-        runStatus={chat.status}
+        runStatus={chat.isStreaming ? "streaming" : chat.status === "error" ? "error" : "idle"}
         onStop={() => {
           chat.stop();
         }}
         accept="image/*,.pdf"
         maxFileSize={10 * 1024 * 1024}
       />
-      <button type="button" onClick={() => clearDraft(activeId)}>Discard draft</button>
-      <button type="button" onClick={clearAllDrafts}>Discard all drafts</button>
+      <button type="button" onClick={() => clearDraft(activeId)}>
+        Discard draft
+      </button>
+      <button type="button" onClick={clearAllDrafts}>
+        Discard all drafts
+      </button>
     </>
   );
 }
@@ -227,11 +233,15 @@ const transport = createSSETransport({
 ```
 
 Reconnects carry the latest SSE `id` through `Last-Event-ID`; enable them only
-for endpoints that make repeated requests idempotent. `useAgentChat` also accepts
-`prepareRequestMessages` for token-window truncation/provider mapping and
-`onWarning` for non-terminal stream errors.
+for endpoints that deduplicate the automatically supplied `requestId` /
+`Idempotency-Key`. `useAgentChat` also accepts `prepareRequestMessages` for
+token-window truncation/provider mapping and `onWarning` for non-terminal
+stream errors. Provider requests receive a safe message projection rather than
+the UI's reasoning, step, branch, and diagnostic state.
 
-`createMockTransport` uses the same `AgentTransport` contract for deterministic component tests and demos. Stores are isolated per `useAgentChat` surface unless an explicit store is shared.
+`createAgentRuntime` owns active runs outside React so routing or multiple panes
+do not accidentally abort work. `createMockTransport` uses the same
+`AgentTransport` contract for deterministic component tests and demos.
 
 ## Quality commands
 
@@ -240,6 +250,7 @@ vp check
 vp test run
 vp pack
 npm run verify:package
+npm run verify:api-docs
 npm run verify:showcase
 vp build
 npm run verify:site-css
@@ -254,6 +265,7 @@ npm run test:e2e
 app/                              workbench and simulated SSE route
 packages/react/src/components/   public interaction primitives
 packages/react/src/runtime/      transport, protocol, store, and React hook
+examples/                        runnable SSE and tool-approval integrations
 docs/                             architecture and performance contracts
 ```
 

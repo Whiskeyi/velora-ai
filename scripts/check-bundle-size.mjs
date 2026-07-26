@@ -5,10 +5,7 @@ import { resolve } from "node:path";
 const outputDirectory = resolve(import.meta.dirname, "..", "dist-pages");
 const html = await readFile(resolve(outputDirectory, "index.html"), "utf8");
 const manifest = JSON.parse(
-  await readFile(
-    resolve(outputDirectory, ".vite", "manifest.json"),
-    "utf8",
-  ),
+  await readFile(resolve(outputDirectory, ".vite", "manifest.json"), "utf8"),
 );
 const entryPath = html.match(/<script[^>]+src="\.\/([^"]+\.js)"/)?.[1];
 const stylesheetPath = html.match(/<link[^>]+href="\.\/([^"]+\.css)"/)?.[1];
@@ -17,16 +14,12 @@ if (!entryPath || !stylesheetPath) {
 }
 
 const manifestEntries = Object.values(manifest);
-const entryRecord = manifestEntries.find(
-  (record) => record.isEntry && record.file === entryPath,
-);
+const entryRecord = manifestEntries.find((record) => record.isEntry && record.file === entryPath);
 if (!entryRecord) {
   throw new Error("Unable to resolve the Pages entry in the Vite manifest.");
 }
 
-const bySource = new Map(
-  Object.entries(manifest).map(([source, record]) => [source, record]),
-);
+const bySource = new Map(Object.entries(manifest).map(([source, record]) => [source, record]));
 const initialSources = new Set();
 const visitStaticImports = (source) => {
   if (initialSources.has(source)) return;
@@ -50,6 +43,7 @@ const budgets = {
   initialJavaScriptGzip: 275 * 1024,
   stylesheetRaw: 135 * 1024,
   stylesheetGzip: 30 * 1024,
+  largestLazyJavaScriptRaw: 700 * 1024,
 };
 
 async function measure(relativePath) {
@@ -58,14 +52,28 @@ async function measure(relativePath) {
   return { raw: metadata.size, gzip: gzipSync(contents).byteLength };
 }
 
-const [entry, stylesheet] = await Promise.all([
-  measure(entryPath),
-  measure(stylesheetPath),
-]);
+const [entry, stylesheet] = await Promise.all([measure(entryPath), measure(stylesheetPath)]);
 const initialAssets = await Promise.all(initialPaths.map(measure));
 const initialJavaScript = initialAssets.reduce(
   (total, asset) => ({ raw: total.raw + asset.raw, gzip: total.gzip + asset.gzip }),
   { ...entry },
+);
+const initialPathSet = new Set([entryPath, ...initialPaths]);
+const lazyJavaScriptPaths = [
+  ...new Set(
+    manifestEntries
+      .map((record) => record.file)
+      .filter(
+        (file) => typeof file === "string" && file.endsWith(".js") && !initialPathSet.has(file),
+      ),
+  ),
+];
+const lazyJavaScriptAssets = await Promise.all(
+  lazyJavaScriptPaths.map(async (path) => ({ path, ...(await measure(path)) })),
+);
+const largestLazyJavaScript = lazyJavaScriptAssets.reduce(
+  (largest, asset) => (asset.raw > largest.raw ? asset : largest),
+  { path: "none", raw: 0, gzip: 0 },
 );
 
 const failures = [
@@ -75,13 +83,19 @@ const failures = [
   ["initial JavaScript gzip", initialJavaScript.gzip, budgets.initialJavaScriptGzip],
   ["stylesheet raw", stylesheet.raw, budgets.stylesheetRaw],
   ["stylesheet gzip", stylesheet.gzip, budgets.stylesheetGzip],
+  [
+    `largest lazy JavaScript (${largestLazyJavaScript.path})`,
+    largestLazyJavaScript.raw,
+    budgets.largestLazyJavaScriptRaw,
+  ],
 ].filter(([, actual, budget]) => actual > budget);
 
 const kilobytes = (bytes) => `${(bytes / 1024).toFixed(1)} kB`;
 console.log(
   `Pages budget: entry ${kilobytes(entry.raw)} raw / ${kilobytes(entry.gzip)} gzip; ` +
     `initial JS ${kilobytes(initialJavaScript.raw)} raw / ${kilobytes(initialJavaScript.gzip)} gzip; ` +
-    `CSS ${kilobytes(stylesheet.raw)} raw / ${kilobytes(stylesheet.gzip)} gzip.`,
+    `CSS ${kilobytes(stylesheet.raw)} raw / ${kilobytes(stylesheet.gzip)} gzip; ` +
+    `largest lazy JS ${kilobytes(largestLazyJavaScript.raw)} raw (${largestLazyJavaScript.path}).`,
 );
 
 if (failures.length > 0) {

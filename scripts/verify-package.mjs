@@ -5,6 +5,7 @@ const packageRoot = new URL("../packages/react/", import.meta.url);
 const entryUrl = new URL("dist/index.mjs", packageRoot);
 const declarationUrl = new URL("dist/index.d.mts", packageRoot);
 const styleUrl = new URL("dist/style.css", packageRoot);
+const richStyleUrl = new URL("dist/rich-content.css", packageRoot);
 const manifestUrl = new URL("package.json", packageRoot);
 const subpathEntries = [
   ["./components", "components-entry.mjs", true],
@@ -18,10 +19,11 @@ const subpathEntries = [
   ["./rich-content/mermaid", "mermaid-entry.mjs", true],
 ];
 
-const [entry, declarations, style, manifestSource] = await Promise.all([
+const [entry, declarations, style, richStyle, manifestSource] = await Promise.all([
   readFile(entryUrl, "utf8"),
   readFile(declarationUrl, "utf8"),
   readFile(styleUrl, "utf8"),
+  readFile(richStyleUrl, "utf8"),
   readFile(manifestUrl, "utf8"),
 ]);
 const manifest = JSON.parse(manifestSource);
@@ -33,9 +35,7 @@ if (!entry.startsWith('"use client";')) {
 for (const [subpath, filename, client] of subpathEntries) {
   const source = await readFile(new URL(`dist/${filename}`, packageRoot), "utf8");
   if (client !== source.startsWith('"use client";')) {
-    throw new Error(
-      `${subpath} ${client ? "must" : "must not"} carry the React client directive`,
-    );
+    throw new Error(`${subpath} ${client ? "must" : "must not"} carry the React client directive`);
   }
   if (manifest.exports?.[subpath]?.import !== `./dist/${filename}`) {
     throw new Error(`Package manifest is missing the ${subpath} export`);
@@ -44,6 +44,8 @@ for (const [subpath, filename, client] of subpathEntries) {
 
 const requiredDeclarationTypes = [
   "AgentRunOutcome",
+  "AgentRequestMessage",
+  "AgentRuntime",
   "PromptDraft",
   "SafeMermaidConfig",
   "SafeKatexOptions",
@@ -57,12 +59,15 @@ for (const typeName of requiredDeclarationTypes) {
   }
 }
 
-const fontPaths = [
-  ...style.matchAll(/url\(["']?(fonts\/KaTeX_[^)"']+)["']?\)/g),
-].map((match) => match[1]);
+const fontPaths = [...richStyle.matchAll(/url\(["']?(fonts\/KaTeX_[^)"']+)["']?\)/g)].map(
+  (match) => match[1],
+);
 
 if (fontPaths.length === 0) {
-  throw new Error("Bundled styles do not reference KaTeX fonts");
+  throw new Error("Optional rich-content styles do not reference KaTeX fonts");
+}
+if (style.includes("KaTeX_")) {
+  throw new Error("Base component styles must not load KaTeX fonts");
 }
 
 await Promise.all(
@@ -88,6 +93,8 @@ const requiredExports = [
   "ToolCallCard",
   "VeloraProvider",
   "createSSETransport",
+  "createAgentRuntime",
+  "toAgentRequestMessage",
   "useAgentChat",
   "usePromptDrafts",
 ];
@@ -124,6 +131,9 @@ for (const selector of requiredSelectors) {
 
 if (manifest.exports?.["./styles.css"] !== "./dist/style.css") {
   throw new Error("Package manifest is missing the public styles.css export");
+}
+if (manifest.exports?.["./rich-content.css"] !== "./dist/rich-content.css") {
+  throw new Error("Package manifest is missing the public rich-content.css export");
 }
 
 console.log(

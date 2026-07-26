@@ -31,6 +31,8 @@ async function collect<T>(source: AsyncIterable<T>): Promise<readonly T[]> {
 }
 
 const request: ChatRequest = {
+  requestId: "request-1",
+  protocolVersion: "1",
   conversationId: "conversation-1",
   responseMessageId: "assistant-1",
   messages: [],
@@ -62,9 +64,7 @@ describe("parseSSEStream", () => {
   });
 
   it("dispatches a final event without a trailing blank line", async () => {
-    const frames = await collect(
-      parseSSEStream(streamBytes("event: done\ndata: {}", [3])),
-    );
+    const frames = await collect(parseSSEStream(streamBytes("event: done\ndata: {}", [3])));
     expect(frames).toEqual([{ event: "done", data: "{}" }]);
   });
 
@@ -74,6 +74,12 @@ describe("parseSSEStream", () => {
     const next = parseSSEStream(stream, { signal: controller.signal }).next();
     controller.abort("test stop");
     await expect(next).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("rejects streams that stop producing bytes", async () => {
+    const stream = new ReadableStream<Uint8Array>({});
+    const next = parseSSEStream(stream, { idleTimeoutMs: 5 }).next();
+    await expect(next).rejects.toMatchObject({ name: "SSEIdleTimeoutError" });
   });
 });
 
@@ -207,6 +213,9 @@ describe("Velora SSE transport", () => {
     const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       expect(init?.method).toBe("POST");
       expect(JSON.parse(String(init?.body))).toEqual(request);
+      const headers = new Headers(init?.headers);
+      expect(headers.get("Idempotency-Key")).toBe(request.requestId);
+      expect(headers.get("X-Velora-Protocol-Version")).toBe("1");
       return new Response(
         streamBytes(
           [
@@ -331,20 +340,14 @@ describe("Velora SSE transport", () => {
       attempt += 1;
       if (attempt === 1) {
         return new Response(
-          streamBytes(
-            'id: event-1\nevent: text-delta\ndata: {"delta":"A"}\n\n',
-            [4],
-          ),
+          streamBytes('id: event-1\nevent: text-delta\ndata: {"delta":"A"}\n\n', [4]),
           { headers: { "Content-Type": "text/event-stream" } },
         );
       }
       expect(new Headers(init?.headers).get("Last-Event-ID")).toBe("event-1");
       return new Response(
         streamBytes(
-          [
-            'event: text-delta\ndata: {"delta":"B"}\n\n',
-            "event: done\ndata: {}\n\n",
-          ].join(""),
+          ['event: text-delta\ndata: {"delta":"B"}\n\n', "event: done\ndata: {}\n\n"].join(""),
           [6],
         ),
         { headers: { "Content-Type": "text/event-stream" } },

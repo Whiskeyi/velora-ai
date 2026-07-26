@@ -8,12 +8,13 @@ import type {
   AgentStreamEvent,
   AgentToolCall,
   AgentToolCallStatus,
+  AgentToolDecision,
   AgentTransport,
   ChatRequest,
   JsonObject,
   JsonValue,
 } from "./types";
-import { isAbortError, parseSSEStream, type SSEFrame } from "./sse";
+import { isAbortError, parseSSEStream, SSEIdleTimeoutError, type SSEFrame } from "./sse";
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -48,10 +49,7 @@ export interface SSETransportConfig {
   readonly fetch?: FetchLike;
   readonly method?: string;
   readonly headers?: HeadersInit | ((request: ChatRequest) => HeadersInit);
-  readonly requestInit?: Omit<
-    RequestInit,
-    "body" | "headers" | "method" | "signal"
-  >;
+  readonly requestInit?: Omit<RequestInit, "body" | "headers" | "method" | "signal">;
   readonly serializeRequest?: (request: ChatRequest) => BodyInit | undefined;
   readonly parseEvent?: (frame: SSEFrame) => AgentStreamEvent | null;
   /** Error events are terminal by default, matching common agent endpoints. */
@@ -66,6 +64,15 @@ export interface SSETransportConfig {
   readonly maxReconnectDelayMs?: number;
   /** Timeout while waiting for response headers. Defaults to 15 seconds. */
   readonly connectTimeoutMs?: number;
+  /** Timeout while waiting for stream bytes after connection. Defaults to 45 seconds. */
+  readonly idleTimeoutMs?: number;
+  /** Header used for request idempotency. Set false to disable. */
+  readonly idempotencyHeader?: string | false;
+  /** Optional application-owned command channel for tool approval decisions. */
+  readonly submitToolDecision?: (
+    decision: AgentToolDecision,
+    options?: { readonly signal?: AbortSignal },
+  ) => Promise<void>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -102,10 +109,7 @@ function readString(
   return undefined;
 }
 
-function readNumber(
-  record: Record<string, unknown>,
-  key: string,
-): number | undefined {
+function readNumber(record: Record<string, unknown>, key: string): number | undefined {
   const value = record[key];
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
@@ -122,9 +126,7 @@ function parseError(value: unknown, fallback = "The agent stream failed"): Agent
   return {
     message: readString(value, "message", "error") ?? fallback,
     ...(typeof value.code === "string" ? { code: value.code } : {}),
-    ...(typeof value.retryable === "boolean"
-      ? { retryable: value.retryable }
-      : {}),
+    ...(typeof value.retryable === "boolean" ? { retryable: value.retryable } : {}),
     ...(details !== undefined ? { details } : {}),
   };
 }
@@ -163,11 +165,7 @@ function parseToolCall(value: unknown): AgentToolCall {
   const id = readString(value, "id", "toolCallId", "tool_call_id");
   const name = readString(value, "name", "toolName", "tool_name");
   const status = readString(value, "status") ?? "draft";
-  if (
-    !id ||
-    !name ||
-    !TOOL_CALL_STATUSES.has(status as AgentToolCallStatus)
-  ) {
+  if (!id || !name || !TOOL_CALL_STATUSES.has(status as AgentToolCallStatus)) {
     throw new VeloraTransportError("A tool-call event has an invalid shape", {
       code: "INVALID_EVENT",
     });
@@ -184,17 +182,13 @@ function parseToolCall(value: unknown): AgentToolCall {
     ...(asJsonValue(value.arguments) !== undefined
       ? { arguments: asJsonValue(value.arguments) }
       : {}),
-    ...(asJsonValue(value.result) !== undefined
-      ? { result: asJsonValue(value.result) }
-      : {}),
+    ...(asJsonValue(value.result) !== undefined ? { result: asJsonValue(value.result) } : {}),
     ...(value.error !== undefined ? { error: parseError(value.error) } : {}),
     ...(metadata ? { metadata } : {}),
   };
 }
 
-function parseToolCallPatch(
-  value: Record<string, unknown>,
-): Partial<Omit<AgentToolCall, "id">> {
+function parseToolCallPatch(value: Record<string, unknown>): Partial<Omit<AgentToolCall, "id">> {
   const status = readString(value, "status");
   if (status && !TOOL_CALL_STATUSES.has(status as AgentToolCallStatus)) {
     throw new VeloraTransportError(`Invalid tool-call status: ${status}`, {
@@ -212,9 +206,7 @@ function parseToolCallPatch(
     ...(asJsonValue(value.arguments) !== undefined
       ? { arguments: asJsonValue(value.arguments) }
       : {}),
-    ...(asJsonValue(value.result) !== undefined
-      ? { result: asJsonValue(value.result) }
-      : {}),
+    ...(asJsonValue(value.result) !== undefined ? { result: asJsonValue(value.result) } : {}),
     ...(value.error !== undefined ? { error: parseError(value.error) } : {}),
     ...(metadata ? { metadata } : {}),
   };
@@ -267,10 +259,9 @@ function parseStep(value: unknown): AgentStep {
   const title = readString(value, "title");
   const status = readString(value, "status");
   if (!id || !title || !status || !STEP_STATUSES.has(status as AgentStepStatus)) {
-    throw new VeloraTransportError(
-      "A step event requires valid id, title and status fields",
-      { code: "INVALID_EVENT" },
-    );
+    throw new VeloraTransportError("A step event requires valid id, title and status fields", {
+      code: "INVALID_EVENT",
+    });
   }
 
   const metadata = asJsonObject(value.metadata);
@@ -278,9 +269,7 @@ function parseStep(value: unknown): AgentStep {
     id,
     title,
     status: status as AgentStepStatus,
-    ...(typeof value.description === "string"
-      ? { description: value.description }
-      : {}),
+    ...(typeof value.description === "string" ? { description: value.description } : {}),
     ...(typeof value.detail === "string" ? { detail: value.detail } : {}),
     ...(readNumber(value, "startedAt") !== undefined
       ? { startedAt: readNumber(value, "startedAt") }
@@ -293,9 +282,7 @@ function parseStep(value: unknown): AgentStep {
   };
 }
 
-function parseStepPatch(
-  value: Record<string, unknown>,
-): Partial<Omit<AgentStep, "id">> {
+function parseStepPatch(value: Record<string, unknown>): Partial<Omit<AgentStep, "id">> {
   const status = readString(value, "status");
   if (status && !STEP_STATUSES.has(status as AgentStepStatus)) {
     throw new VeloraTransportError(`Invalid step status: ${status}`, {
@@ -306,9 +293,7 @@ function parseStepPatch(
   return {
     ...(typeof value.title === "string" ? { title: value.title } : {}),
     ...(status ? { status: status as AgentStepStatus } : {}),
-    ...(typeof value.description === "string"
-      ? { description: value.description }
-      : {}),
+    ...(typeof value.description === "string" ? { description: value.description } : {}),
     ...(typeof value.detail === "string" ? { detail: value.detail } : {}),
     ...(readNumber(value, "startedAt") !== undefined
       ? { startedAt: readNumber(value, "startedAt") }
@@ -351,9 +336,7 @@ function parseMessage(value: unknown): AgentMessage {
     });
   }
 
-  const steps = Array.isArray(value.steps)
-    ? value.steps.map((step) => parseStep(step))
-    : undefined;
+  const steps = Array.isArray(value.steps) ? value.steps.map((step) => parseStep(step)) : undefined;
   const toolCalls = Array.isArray(value.toolCalls)
     ? value.toolCalls.map((toolCall) => parseToolCall(toolCall))
     : undefined;
@@ -371,11 +354,7 @@ function parseMessage(value: unknown): AgentMessage {
         id: readString(value.branch, "id") ?? id,
         ...(readString(value.branch, "parentId", "parent_id")
           ? {
-              parentId: readString(
-                value.branch,
-                "parentId",
-                "parent_id",
-              ),
+              parentId: readString(value.branch, "parentId", "parent_id"),
             }
           : {}),
         index: readNumber(value.branch, "index") ?? 0,
@@ -461,11 +440,7 @@ export function parseAgentSSEFrame(frame: SSEFrame): AgentStreamEvent | null {
         type: "start",
         ...(payloadRecord && readString(payloadRecord, "messageId", "message_id")
           ? {
-              messageId: readString(
-                payloadRecord,
-                "messageId",
-                "message_id",
-              ),
+              messageId: readString(payloadRecord, "messageId", "message_id"),
             }
           : {}),
         ...(payloadRecord && readNumber(payloadRecord, "createdAt") !== undefined
@@ -474,6 +449,13 @@ export function parseAgentSSEFrame(frame: SSEFrame): AgentStreamEvent | null {
       };
       break;
     case "reasoning":
+    case "reasoning-summary":
+    case "reasoning-summary-delta":
+      event = {
+        type: "reasoning-summary-delta",
+        delta: readDelta(frame.data, payload),
+      };
+      break;
     case "reasoning-delta":
     case "thinking-delta":
       event = {
@@ -495,10 +477,9 @@ export function parseAgentSSEFrame(frame: SSEFrame): AgentStreamEvent | null {
         : undefined;
       const patchValue = payloadRecord?.patch;
       if (!stepId || !isRecord(patchValue)) {
-        throw new VeloraTransportError(
-          "A step-update event requires stepId and patch fields",
-          { code: "INVALID_EVENT" },
-        );
+        throw new VeloraTransportError("A step-update event requires stepId and patch fields", {
+          code: "INVALID_EVENT",
+        });
       }
       event = {
         type: "step-update",
@@ -543,10 +524,9 @@ export function parseAgentSSEFrame(frame: SSEFrame): AgentStreamEvent | null {
     case "metadata": {
       const metadata = asJsonObject(payloadRecord?.metadata ?? payload);
       if (!metadata) {
-        throw new VeloraTransportError(
-          "A metadata event must contain a JSON object",
-          { code: "INVALID_EVENT" },
-        );
+        throw new VeloraTransportError("A metadata event must contain a JSON object", {
+          code: "INVALID_EVENT",
+        });
       }
       event = { type: "metadata", metadata };
       break;
@@ -592,11 +572,7 @@ export function parseAgentSSEFrame(frame: SSEFrame): AgentStreamEvent | null {
         type: "done",
         ...(payloadRecord && readString(payloadRecord, "finishReason", "finish_reason")
           ? {
-              finishReason: readString(
-                payloadRecord,
-                "finishReason",
-                "finish_reason",
-              ),
+              finishReason: readString(payloadRecord, "finishReason", "finish_reason"),
             }
           : {}),
         ...(usage ? { usage } : {}),
@@ -660,6 +636,13 @@ function normalizeTransportFailure(
 ): VeloraTransportError | unknown {
   if (isAbortError(error) || signal?.aborted) return error;
   if (error instanceof VeloraTransportError) return error;
+  if (error instanceof SSEIdleTimeoutError) {
+    return new VeloraTransportError("The agent stream became inactive", {
+      code: "IDLE_TIMEOUT",
+      retryable: true,
+      cause: error,
+    });
+  }
   return new VeloraTransportError("The agent stream disconnected", {
     code: "STREAM_ERROR",
     retryable: true,
@@ -671,16 +654,19 @@ function normalizeTransportFailure(
 export function createSSETransport(config: SSETransportConfig): AgentTransport {
   const fetcher = config.fetch ?? globalThis.fetch.bind(globalThis);
   const parseEvent = config.parseEvent ?? parseAgentSSEFrame;
-  const maxReconnectAttempts = Math.max(
-    0,
-    Math.floor(config.maxReconnectAttempts ?? 0),
-  );
+  const maxReconnectAttempts = Math.max(0, Math.floor(config.maxReconnectAttempts ?? 0));
+  if (
+    config.idleTimeoutMs !== undefined &&
+    (!Number.isFinite(config.idleTimeoutMs) || config.idleTimeoutMs <= 0)
+  ) {
+    throw new RangeError("idleTimeoutMs must be a positive number");
+  }
 
   return {
     name: "VeloraSSETransport",
+    ...(config.submitToolDecision ? { submitToolDecision: config.submitToolDecision } : {}),
     async *stream(request, options = {}) {
-      const url =
-        typeof config.url === "function" ? config.url(request) : config.url;
+      const url = typeof config.url === "function" ? config.url(request) : config.url;
       const body = config.serializeRequest
         ? config.serializeRequest(request)
         : JSON.stringify(request);
@@ -690,16 +676,24 @@ export function createSSETransport(config: SSETransportConfig): AgentTransport {
 
       while (true) {
         try {
+          options.onConnectionStatusChange?.(reconnectAttempt > 0 ? "reconnecting" : "connecting");
           const headers = resolveHeaders(
             config.headers,
             request,
             config.serializeRequest === undefined,
           );
+          const idempotencyHeader =
+            config.idempotencyHeader === undefined ? "Idempotency-Key" : config.idempotencyHeader;
+          if (idempotencyHeader !== false && !headers.has(idempotencyHeader)) {
+            headers.set(idempotencyHeader, request.requestId);
+          }
+          if (!headers.has("X-Velora-Protocol-Version")) {
+            headers.set("X-Velora-Protocol-Version", request.protocolVersion);
+          }
           if (lastEventId !== undefined) headers.set("Last-Event-ID", lastEventId);
 
           const connectController = new AbortController();
-          const forwardAbort = () =>
-            connectController.abort(options.signal?.reason);
+          const forwardAbort = () => connectController.abort(options.signal?.reason);
           options.signal?.addEventListener("abort", forwardAbort, { once: true });
           const connectTimeout = setTimeout(
             () => connectController.abort("Connection timed out"),
@@ -717,114 +711,89 @@ export function createSSETransport(config: SSETransportConfig): AgentTransport {
           } catch (error) {
             if (options.signal?.aborted) throw error;
             if (connectController.signal.aborted) {
-              throw new VeloraTransportError(
-                "The agent endpoint did not respond in time",
-                {
-                  code: "CONNECT_TIMEOUT",
-                  retryable: true,
-                  cause: error,
-                },
-              );
-            }
-            throw new VeloraTransportError(
-              "Unable to connect to the agent endpoint",
-              {
-                code: "NETWORK_ERROR",
+              throw new VeloraTransportError("The agent endpoint did not respond in time", {
+                code: "CONNECT_TIMEOUT",
                 retryable: true,
                 cause: error,
-              },
-            );
+              });
+            }
+            throw new VeloraTransportError("Unable to connect to the agent endpoint", {
+              code: "NETWORK_ERROR",
+              retryable: true,
+              cause: error,
+            });
           } finally {
             clearTimeout(connectTimeout);
             options.signal?.removeEventListener("abort", forwardAbort);
           }
 
           if (!response.ok) {
-            const diagnosticDetail = (
-              await response.text().catch(() => "")
-            ).slice(0, 1_024);
-            throw new VeloraTransportError(
-              `Agent endpoint returned HTTP ${response.status}`,
-              {
-                status: response.status,
-                code: "HTTP_ERROR",
-                retryable: response.status === 429 || response.status >= 500,
-                ...(diagnosticDetail ? { diagnosticDetail } : {}),
-              },
-            );
+            const diagnosticDetail = (await response.text().catch(() => "")).slice(0, 1_024);
+            throw new VeloraTransportError(`Agent endpoint returned HTTP ${response.status}`, {
+              status: response.status,
+              code: "HTTP_ERROR",
+              retryable: response.status === 429 || response.status >= 500,
+              ...(diagnosticDetail ? { diagnosticDetail } : {}),
+            });
           }
 
-          const contentType = response.headers
-            .get("Content-Type")
-            ?.toLowerCase();
-          if (
-            config.validateContentType !== false &&
-            !contentType?.includes("text/event-stream")
-          ) {
-            const diagnosticDetail = (
-              await response.text().catch(() => "")
-            ).slice(0, 1_024);
-            throw new VeloraTransportError(
-              "Agent endpoint returned an unexpected content type",
-              {
-                status: response.status,
-                code: "UNEXPECTED_CONTENT_TYPE",
-                retryable: true,
-                ...(diagnosticDetail ? { diagnosticDetail } : {}),
-              },
-            );
+          const contentType = response.headers.get("Content-Type")?.toLowerCase();
+          if (config.validateContentType !== false && !contentType?.includes("text/event-stream")) {
+            const diagnosticDetail = (await response.text().catch(() => "")).slice(0, 1_024);
+            throw new VeloraTransportError("Agent endpoint returned an unexpected content type", {
+              status: response.status,
+              code: "UNEXPECTED_CONTENT_TYPE",
+              retryable: true,
+              ...(diagnosticDetail ? { diagnosticDetail } : {}),
+            });
           }
 
           if (!response.body) {
-            throw new VeloraTransportError(
-              "Agent endpoint returned an empty stream",
-              {
-                status: response.status,
-                code: "EMPTY_STREAM",
-                retryable: true,
-              },
-            );
+            throw new VeloraTransportError("Agent endpoint returned an empty stream", {
+              status: response.status,
+              code: "EMPTY_STREAM",
+              retryable: true,
+            });
           }
 
-        let terminalEventSeen = false;
-        for await (const frame of parseSSEStream(response.body, {
-          signal: options.signal,
-        })) {
-          if (frame.id !== undefined) lastEventId = frame.id;
-          if (frame.retry !== undefined) serverRetryMs = frame.retry;
-          const parsedEvent = parseEvent(frame);
-          const event =
-            parsedEvent?.type === "error" &&
-            parsedEvent.terminal === undefined &&
-            config.terminateOnError === false
-              ? {
-                  ...parsedEvent,
-                  terminal: false,
-                }
-              : parsedEvent;
-          if (!event) {
-            continue;
+          options.onConnectionStatusChange?.("streaming");
+          let terminalEventSeen = false;
+          for await (const frame of parseSSEStream(response.body, {
+            signal: options.signal,
+            idleTimeoutMs: config.idleTimeoutMs ?? 45_000,
+          })) {
+            if (frame.id !== undefined) lastEventId = frame.id;
+            if (frame.retry !== undefined) serverRetryMs = frame.retry;
+            const parsedEvent = parseEvent(frame);
+            const event =
+              parsedEvent?.type === "error" &&
+              parsedEvent.terminal === undefined &&
+              config.terminateOnError === false
+                ? {
+                    ...parsedEvent,
+                    terminal: false,
+                  }
+                : parsedEvent;
+            if (!event) {
+              continue;
+            }
+            yield event;
+            if (event.type === "done" || (event.type === "error" && event.terminal !== false)) {
+              terminalEventSeen = true;
+              break;
+            }
           }
-          yield event;
+
           if (
-            event.type === "done" ||
-            (event.type === "error" && event.terminal !== false)
+            config.requireTerminalEvent !== false &&
+            !terminalEventSeen &&
+            !options.signal?.aborted
           ) {
-            terminalEventSeen = true;
-            break;
+            throw new VeloraTransportError("The agent stream ended before a terminal event", {
+              code: "INCOMPLETE_STREAM",
+              retryable: true,
+            });
           }
-        }
-
-        if (
-          config.requireTerminalEvent !== false &&
-          !terminalEventSeen &&
-          !options.signal?.aborted
-        ) {
-          throw new VeloraTransportError(
-            "The agent stream ended before a terminal event",
-            { code: "INCOMPLETE_STREAM", retryable: true },
-          );
-        }
           return;
         } catch (error) {
           const failure = normalizeTransportFailure(error, options.signal);
@@ -834,13 +803,8 @@ export function createSSETransport(config: SSETransportConfig): AgentTransport {
             reconnectAttempt < maxReconnectAttempts
           ) {
             const baseDelay =
-              serverRetryMs ??
-              Math.max(0, config.reconnectDelayMs ?? 750) *
-                2 ** reconnectAttempt;
-            const delay = Math.min(
-              Math.max(0, config.maxReconnectDelayMs ?? 10_000),
-              baseDelay,
-            );
+              serverRetryMs ?? Math.max(0, config.reconnectDelayMs ?? 750) * 2 ** reconnectAttempt;
+            const delay = Math.min(Math.max(0, config.maxReconnectDelayMs ?? 10_000), baseDelay);
             reconnectAttempt += 1;
             await waitForRetry(delay, options.signal);
             continue;

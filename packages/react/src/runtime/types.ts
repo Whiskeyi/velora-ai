@@ -10,12 +10,16 @@ export type JsonObject = { readonly [key: string]: JsonValue };
 
 export type AgentRole = "system" | "user" | "assistant" | "tool";
 
-export type AgentMessageStatus =
-  | "queued"
+export type AgentMessageStatus = "queued" | "streaming" | "complete" | "error" | "aborted";
+
+export type AgentRunStatus =
+  | "connecting"
   | "streaming"
-  | "complete"
-  | "error"
-  | "aborted";
+  | "awaiting-approval"
+  | "running-tool"
+  | "reconnecting"
+  | "stopping"
+  | "error";
 
 export type AgentStepStatus =
   | "pending"
@@ -72,12 +76,7 @@ export interface AgentMessageBranch {
   readonly count: number;
 }
 
-export type AgentAttachmentKind =
-  | "file"
-  | "image"
-  | "audio"
-  | "video"
-  | (string & {});
+export type AgentAttachmentKind = "file" | "image" | "audio" | "video" | (string & {});
 
 export interface AgentAttachment {
   readonly id: string;
@@ -107,6 +106,26 @@ export interface AgentMessage {
   readonly metadata?: JsonObject;
 }
 
+/**
+ * Provider-facing message shape. UI-only fields such as status, reasoning,
+ * steps and branches are intentionally excluded from transport requests.
+ */
+export interface AgentRequestMessage {
+  readonly role: AgentRole;
+  readonly content: string;
+  readonly attachments?: readonly AgentAttachment[];
+  readonly metadata?: JsonObject;
+}
+
+/** Safely projects a rendered message into the provider-facing request shape. */
+export function toAgentRequestMessage(message: AgentMessage): AgentRequestMessage {
+  return {
+    role: message.role,
+    content: message.content,
+    ...(message.attachments?.length ? { attachments: message.attachments } : {}),
+  };
+}
+
 export interface Conversation {
   readonly id: string;
   readonly title?: string;
@@ -118,9 +137,13 @@ export interface Conversation {
 
 /** A serializable request passed to an AgentTransport. */
 export interface ChatRequest {
+  /** Stable idempotency key reused by reconnect attempts. */
+  readonly requestId: string;
+  /** Velora stream protocol version. */
+  readonly protocolVersion: "1";
   readonly conversationId: string;
   readonly responseMessageId: string;
-  readonly messages: readonly AgentMessage[];
+  readonly messages: readonly AgentRequestMessage[];
   readonly metadata?: JsonObject;
 }
 
@@ -154,6 +177,11 @@ export type AgentStreamEvent =
       readonly delta: string;
     })
   | (StreamEventBase & {
+      readonly type: "reasoning-summary-delta";
+      readonly delta: string;
+    })
+  | (StreamEventBase & {
+      /** @deprecated Prefer reasoning-summary-delta for user-visible reasoning. */
       readonly type: "reasoning-delta";
       readonly delta: string;
     })
@@ -196,25 +224,32 @@ export type AgentStreamEvent =
       readonly metadata?: JsonObject;
     });
 
+export type AgentTransportConnectionStatus = "connecting" | "streaming" | "reconnecting";
+
 export interface AgentTransportOptions {
   readonly signal?: AbortSignal;
+  readonly onConnectionStatusChange?: (status: AgentTransportConnectionStatus) => void;
+}
+
+export interface AgentToolDecision {
+  readonly requestId: string;
+  readonly conversationId: string;
+  readonly responseMessageId: string;
+  readonly toolCallId: string;
+  readonly decision: "approve" | "reject";
+  readonly result?: JsonValue;
+  readonly metadata?: JsonObject;
 }
 
 /** Transport contract shared by real SSE and deterministic mock adapters. */
 export interface AgentTransport {
   readonly name?: string;
-  stream(
-    request: ChatRequest,
-    options?: AgentTransportOptions,
-  ): AsyncIterable<AgentStreamEvent>;
+  stream(request: ChatRequest, options?: AgentTransportOptions): AsyncIterable<AgentStreamEvent>;
+  /** Optional side-channel used by human-in-the-loop tool approvals. */
+  submitToolDecision?(decision: AgentToolDecision, options?: AgentTransportOptions): Promise<void>;
 }
 
-export type VeloraIdKind =
-  | "conversation"
-  | "message"
-  | "request"
-  | "step"
-  | "tool-call";
+export type VeloraIdKind = "conversation" | "message" | "request" | "step" | "tool-call";
 
 export type VeloraIdFactory = (kind: VeloraIdKind) => string;
 
@@ -234,6 +269,19 @@ export interface SendMessageOptions {
 export interface RetryMessageOptions {
   readonly requestMetadata?: JsonObject;
 }
+
+export interface AgentToolDecisionOptions {
+  readonly result?: JsonValue;
+  readonly metadata?: JsonObject;
+}
+
+export type AgentToolDecisionResult =
+  | { readonly accepted: true }
+  | {
+      readonly accepted: false;
+      readonly reason: "no-active-run" | "tool-call-not-found" | "unsupported" | "failed";
+      readonly error?: AgentError;
+    };
 
 export interface AcceptedSendResult {
   readonly accepted: true;

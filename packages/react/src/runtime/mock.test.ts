@@ -4,17 +4,14 @@ import { createMockTransport } from "./mock";
 import type { AgentStreamEvent, ChatRequest } from "./types";
 
 const request: ChatRequest = {
+  requestId: "request-1",
+  protocolVersion: "1",
   conversationId: "conversation-1",
   responseMessageId: "assistant-1",
   messages: [
     {
-      id: "user-1",
-      conversationId: "conversation-1",
       role: "user",
       content: "hello",
-      status: "complete",
-      createdAt: 1,
-      updatedAt: 1,
     },
   ],
 };
@@ -79,9 +76,7 @@ describe("createMockTransport", () => {
 
   it("validates chunk and delay configuration", async () => {
     expect(() => createMockTransport({ chunkSize: 0 })).toThrow(RangeError);
-    expect(() => createMockTransport({ response: "x", delayMs: -1 })).toThrow(
-      RangeError,
-    );
+    expect(() => createMockTransport({ response: "x", delayMs: -1 })).toThrow(RangeError);
     const transport = createMockTransport({
       response: "x",
       delayMs: () => Number.NaN,

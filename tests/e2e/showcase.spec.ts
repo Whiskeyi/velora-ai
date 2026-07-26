@@ -66,3 +66,21 @@ test("mobile component docs avoid page overflow and expose compact navigation", 
   }));
   expect(metrics.scrollWidth).toBe(metrics.clientWidth);
 });
+
+test("the component reference keeps its core contract across desktop engines", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name === "mobile-chromium");
+  await page.goto("/components/message-list/");
+
+  await expect(page.getByRole("heading", { level: 1, name: "MessageList" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "MessageList API" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Theme" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Direction" })).toBeVisible();
+
+  const metrics = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(metrics.scrollWidth).toBe(metrics.clientWidth);
+});

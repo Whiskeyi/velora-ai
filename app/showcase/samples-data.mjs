@@ -652,7 +652,11 @@ function Demo() {
         onFollowChange={setFollowing}
         onNewActivityCountChange={setNewActivity}
         onReachStart={loadHistory}
-        windowing={{ threshold: 200, estimateRowHeight: 112, overscan: 8 }}
+        windowing={{
+          threshold: 200,
+          estimateRowHeight: (message) => message.toolCalls?.length ? 260 : 112,
+          overscan: 8,
+        }}
         onReachStartError={(error) =>
           setHistoryError(error instanceof Error ? error.message : "History could not be loaded")
         }

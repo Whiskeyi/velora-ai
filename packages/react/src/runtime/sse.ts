@@ -9,6 +9,15 @@ export interface SSEFrame {
 
 export interface ParseSSEOptions {
   readonly signal?: AbortSignal;
+  /** Maximum time without receiving bytes before the stream is considered stale. */
+  readonly idleTimeoutMs?: number;
+}
+
+export class SSEIdleTimeoutError extends Error {
+  constructor() {
+    super("The SSE stream stopped producing data");
+    this.name = "SSEIdleTimeoutError";
+  }
 }
 
 /** Returns true for browser and cross-runtime abort errors. */
@@ -26,6 +35,8 @@ export async function* parseSSEStream(
   options: ParseSSEOptions = {},
 ): AsyncGenerator<SSEFrame, void, undefined> {
   const { signal } = options;
+  const idleTimeoutMs =
+    options.idleTimeoutMs === undefined ? undefined : Math.max(1, options.idleTimeoutMs);
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -106,8 +117,7 @@ export async function* parseSSEStream(
         return undefined;
       }
 
-      const delimiterLength =
-        character === "\r" && buffer[index + 1] === "\n" ? 2 : 1;
+      const delimiterLength = character === "\r" && buffer[index + 1] === "\n" ? 2 : 1;
       const line = buffer.slice(0, index);
       buffer = buffer.slice(index + delimiterLength);
       return line;
@@ -131,7 +141,17 @@ export async function* parseSSEStream(
   try {
     throwIfAborted(signal);
     while (!ended) {
-      const result = await reader.read();
+      let idleTimer: ReturnType<typeof setTimeout> | undefined;
+      const result = await (idleTimeoutMs === undefined
+        ? reader.read()
+        : Promise.race([
+            reader.read(),
+            new Promise<never>((_, reject) => {
+              idleTimer = setTimeout(() => reject(new SSEIdleTimeoutError()), idleTimeoutMs);
+            }),
+          ]).finally(() => {
+            if (idleTimer !== undefined) clearTimeout(idleTimer);
+          }));
       throwIfAborted(signal);
 
       if (result.done) {

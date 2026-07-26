@@ -37,6 +37,15 @@ export interface VeloraTokens {
   radiusSmall: string;
   shadow: string;
   blur: string;
+  spacingUnit: string;
+  controlHeight: string;
+  messageGap: string;
+  focusRingWidth: string;
+  focusRingOffset: string;
+  motionFast: string;
+  motionNormal: string;
+  motionSlow: string;
+  motionEasing: string;
   fontSans: string;
   fontMono: string;
 }
@@ -66,8 +75,10 @@ const defaultContext: VeloraContextValue = {
 
 const VeloraContext = createContext<VeloraContextValue>(defaultContext);
 
-export interface VeloraProviderProps
-  extends Omit<HTMLAttributes<HTMLDivElement>, "children" | "dir"> {
+export interface VeloraProviderProps extends Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "children" | "dir"
+> {
   children: ReactNode;
   /** Class-name prefix used by component semantic DOM. Built-in `vl-*` classes remain as styling hooks. */
   prefixCls?: string;
@@ -102,6 +113,15 @@ const tokenVariables: Record<keyof VeloraTokens, `--vl-${string}`> = {
   radiusSmall: "--vl-radius-sm",
   shadow: "--vl-shadow",
   blur: "--vl-blur",
+  spacingUnit: "--vl-spacing-unit",
+  controlHeight: "--vl-control-height",
+  messageGap: "--vl-message-gap",
+  focusRingWidth: "--vl-focus-ring-width",
+  focusRingOffset: "--vl-focus-ring-offset",
+  motionFast: "--vl-motion-fast",
+  motionNormal: "--vl-motion-normal",
+  motionSlow: "--vl-motion-slow",
+  motionEasing: "--vl-motion-easing",
   fontSans: "--vl-font-sans",
   fontMono: "--vl-font-mono",
 };

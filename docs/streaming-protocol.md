@@ -10,12 +10,19 @@ Provider-specific schemas can supply `parseEvent`.
 
 ```json
 {
+  "requestId": "request-018f",
+  "protocolVersion": "1",
   "conversationId": "conversation-1",
   "responseMessageId": "message-2",
   "messages": [],
   "metadata": {}
 }
 ```
+
+Velora also sends `Idempotency-Key` and `X-Velora-Protocol-Version` headers by
+default. Request messages contain only provider-facing role, content and
+attachments. UI status, reasoning, steps, branches and diagnostic errors are
+never copied into provider context by default.
 
 ## Frames
 
@@ -34,19 +41,20 @@ data: {"finishReason":"stop","usage":{"outputTokens":12}}
 
 Supported event names are:
 
-| Velora event | Required payload |
-| --- | --- |
-| `start` | optional `messageId`, `createdAt` |
-| `text-delta` | `delta` string |
-| `reasoning-delta` | `delta` string |
-| `step` | complete `step` object |
-| `step-update` | `stepId` and partial `patch` |
-| `tool-call` | complete `toolCall` with stable ID, name and status |
-| `tool-call-update` | `toolCallId` and partial `patch` |
-| `message` | complete `message` object |
-| `metadata` | JSON-safe `metadata` object |
-| `error` | `error.message`, optional code/retryable/details |
-| `done` | optional finish reason, usage, and metadata |
+| Velora event              | Required payload                                    |
+| ------------------------- | --------------------------------------------------- |
+| `start`                   | optional `messageId`, `createdAt`                   |
+| `text-delta`              | `delta` string                                      |
+| `reasoning-summary-delta` | user-visible, policy-safe `delta` string            |
+| `reasoning-delta`         | deprecated compatibility event                      |
+| `step`                    | complete `step` object                              |
+| `step-update`             | `stepId` and partial `patch`                        |
+| `tool-call`               | complete `toolCall` with stable ID, name and status |
+| `tool-call-update`        | `toolCallId` and partial `patch`                    |
+| `message`                 | complete `message` object                           |
+| `metadata`                | JSON-safe `metadata` object                         |
+| `error`                   | `error.message`, optional code/retryable/details    |
+| `done`                    | optional finish reason, usage, and metadata         |
 
 `[DONE]` in a data frame is also recognized. `ping` and `heartbeat` events are
 ignored. Error and done events terminate the stream by default.
@@ -66,9 +74,17 @@ Idempotent endpoints can opt into reconnection with
 exponential backoff. POST endpoints must deduplicate repeated request IDs before
 enabling this policy.
 
+Response headers have a 15-second default timeout. Connected streams also have a
+45-second default idle timeout; heartbeat bytes reset that timer. Both values
+are configurable.
+
+Tool approval uses the optional `AgentTransport.submitToolDecision` side
+channel. The main stream can remain open in `awaiting-approval` while the
+application authorizes or rejects the stable tool-call ID.
+
 ## Cancellation and batching
 
-The transport receives the hook's `AbortSignal`. `stop()` flushes buffered text
+The transport receives the runtime's `AbortSignal`. `stop()` flushes buffered text
 and reasoning, aborts the fetch, and marks the response as aborted. Text and
 reasoning events are committed together every 16 ms by default; set
 `streamBatchMs: 0` for immediate commits.

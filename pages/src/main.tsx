@@ -1,13 +1,13 @@
 import "../../app/globals.css";
 import "../../packages/react/src/velora.css";
+import "../../packages/react/src/rich-content.css";
 import { isSampleKey } from "../../app/component-registry";
 
 async function bootstrapPages(): Promise<void> {
-  const [{ createRoot }, { ComponentDetailClient, ShowcaseClient }] =
-    await Promise.all([
-      import("react-dom/client"),
-      import("../../app/showcase-client"),
-    ]);
+  const [{ createRoot }, { ComponentDetailClient, ShowcaseClient }] = await Promise.all([
+    import("react-dom/client"),
+    import("../../app/showcase-client"),
+  ]);
   const rootElement = document.getElementById("root");
 
   if (!rootElement) {
@@ -26,9 +26,7 @@ async function bootstrapPages(): Promise<void> {
   );
 }
 
-const viteEnvironment = (
-  import.meta as ImportMeta & { env?: { SSR?: boolean } }
-).env;
+const viteEnvironment = (import.meta as ImportMeta & { env?: { SSR?: boolean } }).env;
 
 if (viteEnvironment?.SSR !== true && typeof document !== "undefined") {
   void bootstrapPages();

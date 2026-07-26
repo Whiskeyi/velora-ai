@@ -14,6 +14,13 @@ React and React DOM 18.3 or newer are peer dependencies. Import the stylesheet o
 import "@velora-ai/react/styles.css";
 ```
 
+Load the optional KaTeX font sheet only in products that render formulas or
+math-enabled Markdown:
+
+```tsx
+import "@velora-ai/react/rich-content.css";
+```
+
 Rich output is available from the root and aggregate `rich-content` exports. For
 route-level or feature-level code splitting, use the granular client subpaths so
 loading a code block does not also make Markdown, KaTeX, or Mermaid part of the
@@ -32,24 +39,24 @@ The project site includes a live-editable workbench and a component API referenc
 
 Velora 的组件按职责拆分，不强制你的后端、模型厂商、上传层或权限系统。
 
-| 组件 | 负责什么 | 接入重点 |
-| --- | --- | --- |
-| `VeloraProvider` | 主题、密度、动效、语义 token | 在 AI 界面外层包一次，按产品覆盖 tokens |
-| `AgentShell` | 会话侧栏、主对话区、输入区、检查器布局 | 状态放在业务层，移动端抽屉交给 shell |
-| `ConversationList` | 会话搜索、分组、新建、状态 | `activeId` 受控，和 `MessageList.conversationKey` 使用同一个会话 ID |
-| `PromptComposer` | 文本、附件、模型/工具选择、预检、停止 | `onSubmit` 返回 accepted，不等待完整 stream；附件上传由业务层完成 |
-| `MessageList` | 流式跟随、阅读锚点、历史 prepend、未读活动、长列表窗口化 | 保持 message ID 稳定，长会话启用 `windowing` |
-| `MessageBubble` | 单条消息外壳、附件、操作、分支、底部信息 | 富文本正文建议通过 `children` 接 `MarkdownRenderer` |
-| `MessageActions` | 复制、编辑、重新生成、赞踩、异步回滚 | 组件只管交互状态，真正的数据 mutation 由应用完成 |
-| `MessageBranchNavigator` | 多候选回复切换 | `index` 零基受控，分支内容保存在业务状态里 |
-| `ReasoningPanel` | 思考摘要/trace 展开、耗时、错误上下文 | 默认使用 `contentMode="summary"`，不直接暴露敏感链路 |
-| `AgentSteps` | 多步骤状态、详情、耗时和 retry | 后端 step 事件要保持稳定 ID，避免展开状态跳动 |
-| `ToolCallCard` | 工具参数、风险、审批、执行、错误和重试 | UI 审批不能替代服务端权限和策略检查 |
-| `MarkdownRenderer` | GFM、公式、代码、Mermaid 的渐进渲染 | 默认不要启用 raw HTML；流式时开启 block 稳定策略 |
-| `CodeBlock` | 高亮、复制、换行、折叠、下载 | 自定义 highlighter 需要净化不可信 HTML |
-| `Formula` | KaTeX 行内/块级公式、复制和错误 fallback | 安全字段由组件锁定，使用有限 `maxSize` / `maxExpand` |
-| `MermaidDiagram` | Mermaid 懒加载、缩放、复制源、错误恢复 | 对不可信图表使用 strict 安全配置 |
-| `StreamingIndicator` | 生成中、暂停、进度和完成反馈 | 放在等待内容附近，不做全局阻塞 |
+| 组件                     | 负责什么                                                 | 接入重点                                                            |
+| ------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------- |
+| `VeloraProvider`         | 主题、密度、动效、语义 token                             | 在 AI 界面外层包一次，按产品覆盖 tokens                             |
+| `AgentShell`             | 会话侧栏、主对话区、输入区、检查器布局                   | 状态放在业务层，移动端抽屉交给 shell                                |
+| `ConversationList`       | 会话搜索、分组、新建、状态                               | `activeId` 受控，和 `MessageList.conversationKey` 使用同一个会话 ID |
+| `PromptComposer`         | 文本、附件、模型/工具选择、预检、停止                    | `onSubmit` 返回 accepted，不等待完整 stream；附件上传由业务层完成   |
+| `MessageList`            | 流式跟随、阅读锚点、历史 prepend、未读活动、长列表窗口化 | 保持 message ID 稳定，长会话启用 `windowing`                        |
+| `MessageBubble`          | 单条消息外壳、附件、操作、分支、底部信息                 | 富文本正文建议通过 `children` 接 `MarkdownRenderer`                 |
+| `MessageActions`         | 复制、编辑、重新生成、赞踩、异步回滚                     | 组件只管交互状态，真正的数据 mutation 由应用完成                    |
+| `MessageBranchNavigator` | 多候选回复切换                                           | `index` 零基受控，分支内容保存在业务状态里                          |
+| `ReasoningPanel`         | 思考摘要/trace 展开、耗时、错误上下文                    | 默认使用 `contentMode="summary"`，不直接暴露敏感链路                |
+| `AgentSteps`             | 多步骤状态、详情、耗时和 retry                           | 后端 step 事件要保持稳定 ID，避免展开状态跳动                       |
+| `ToolCallCard`           | 工具参数、风险、审批、执行、错误和重试                   | UI 审批不能替代服务端权限和策略检查                                 |
+| `MarkdownRenderer`       | GFM、公式、代码、Mermaid 的渐进渲染                      | 默认不要启用 raw HTML；流式时开启 block 稳定策略                    |
+| `CodeBlock`              | 高亮、复制、换行、折叠、下载                             | 自定义 highlighter 需要净化不可信 HTML                              |
+| `Formula`                | KaTeX 行内/块级公式、复制和错误 fallback                 | 安全字段由组件锁定，使用有限 `maxSize` / `maxExpand`                |
+| `MermaidDiagram`         | Mermaid 懒加载、缩放、复制源、错误恢复                   | 对不可信图表使用 strict 安全配置                                    |
+| `StreamingIndicator`     | 生成中、暂停、进度和完成反馈                             | 放在等待内容附近，不做全局阻塞                                      |
 
 ## A complete send lifecycle
 
@@ -65,6 +72,7 @@ import {
   MessageList,
   PromptComposer,
   VeloraProvider,
+  createAgentRuntime,
   createSSETransport,
   useAgentChat,
   type AgentAttachment,
@@ -73,6 +81,7 @@ import {
   type PromptSubmitResult,
 } from "@velora-ai/react";
 import "@velora-ai/react/styles.css";
+import "@velora-ai/react/rich-content.css";
 
 const transport = createSSETransport({ url: "/api/agent" });
 
@@ -130,7 +139,7 @@ export function Chat() {
         draft={draft}
         onDraftChange={setDraft}
         onSubmit={submit}
-        runStatus={chat.status}
+        runStatus={chat.isStreaming ? "streaming" : chat.status === "error" ? "error" : "idle"}
         onStop={() => {
           chat.stop();
         }}
@@ -143,6 +152,24 @@ export function Chat() {
 }
 ```
 
+For runs that must survive route changes, create the runtime above the view and
+pass it into each subscriber:
+
+```tsx
+const runtime = createAgentRuntime({ transport });
+
+function Conversation({ id }: { id: string }) {
+  const chat = useAgentChat({ runtime, transport, conversationId: id });
+  // Unmounting this view does not stop the runtime. Call chat.stop() when the
+  // workflow itself should end.
+}
+```
+
+`ChatRequest.messages` uses the provider-facing `AgentRequestMessage` shape.
+Velora excludes UI status, reasoning, steps, branches, and errors by default.
+Each request carries a stable `requestId`, protocol version, and idempotency
+header across reconnects.
+
 `VeloraProvider` provides component-level internationalization as well as design
 tokens. Set `locale="en-US"` or `locale="zh-CN"` once for built-in labels,
 screen-reader announcements, placeholders, and action names. Use the typed
@@ -151,7 +178,7 @@ catalog.
 
 Do not hold the composer submission open for the whole stream. `runStatus` is the source of truth for the stop button and generation state; `messages` is the source of truth for streamed output. `chat.stop()` synchronously aborts the active transport and returns whether a run was stopped. An application with a remote cancellation handshake can temporarily pass `runStatus="stopping"` while that handshake settles.
 
-The attachment conversion above sends JSON-safe file descriptors, not file bytes. Upload binary data through the application's upload layer first, then include its durable URL or provider reference in the `AgentAttachment`. Client-only preview URLs are not server upload URLs. `useAgentChat.send` currently requires non-empty text, so an attachments-only product must supply an explicit request instruction or reject that draft at the adapter boundary.
+The attachment conversion above sends JSON-safe file descriptors, not file bytes. Upload binary data through the application's upload layer first, then include its durable URL or provider reference in the `AgentAttachment`. Client-only preview URLs are not server upload URLs. Attachments-only drafts are accepted when at least one durable attachment descriptor is present.
 
 ## Prompt drafts and attachments
 
@@ -198,7 +225,7 @@ function ConversationComposer({ activeId }: { activeId: string }) {
         draft={getDraft(activeId)}
         onDraftChange={(next) => setDraft(activeId, next)}
         onSubmit={submit}
-        runStatus={chat.status}
+        runStatus={chat.isStreaming ? "streaming" : chat.status === "error" ? "error" : "idle"}
         onStop={() => {
           chat.stop();
         }}
@@ -252,7 +279,7 @@ import {
   }
 >
   <MarkdownRenderer content={branches[branchIndex]?.content ?? message.content} />
-</MessageBubble>
+</MessageBubble>;
 ```
 
 The branch navigator supports previous/next buttons plus Left, Right, Home, and End keys. Both primitives can be controlled when feedback or branch selection must follow routing or server state.
@@ -270,7 +297,11 @@ import { MessageList } from "@velora-ai/react";
   followThreshold={96}
   reachStartThreshold={40}
   onFollowChange={setFollowing}
-  windowing={{ threshold: 200, estimateRowHeight: 112, overscan: 8 }}
+  windowing={{
+    threshold: 200,
+    estimateRowHeight: (message) => (message.toolCalls?.length ? 260 : 112),
+    overscan: 8,
+  }}
   onNewActivityCountChange={setUnreadUpdates}
   onReachStart={async () => {
     if (loadingHistory || !hasMore) return;
@@ -281,7 +312,7 @@ import { MessageList } from "@velora-ai/react";
     setHistoryError(error instanceof Error ? error.message : "History could not be loaded");
   }}
   renderMessage={renderMessage}
-/>
+/>;
 ```
 
 Change `conversationKey` whenever `messages` switches to a different session or dataset. That atomically clears unseen activity, invalidates internal history-load bookkeeping, restores follow mode, and moves the new dataset to its latest message without announcing the replacement as new activity. Consumers should still cancel or scope their own network request by conversation. Rejected `onReachStart` promises call `onReachStartError` and rearm the top threshold for a later retry.
@@ -316,7 +347,7 @@ import { ToolCallCard } from "@velora-ai/react";
   result={toolResult}
   error={toolError}
   onRetry={retryTool}
-/>
+/>;
 ```
 
 An approval button is not an authorization boundary. Revalidate identity, scope, arguments, and policy on the server immediately before executing a tool, especially for high and critical risk actions.
@@ -373,36 +404,36 @@ import { CodeBlock, MermaidDiagram } from "@velora-ai/react";
 
 ## Component map
 
-| Area | Primitives |
-| --- | --- |
-| Layout and theme | `AgentShell`, `VeloraProvider` |
-| Sessions and drafts | `ConversationList`, `usePromptDrafts` |
-| Conversation | `MessageList`, `MessageBubble`, `MessageActions`, `MessageBranchNavigator`, `PromptComposer` |
-| Agent process | `ReasoningPanel`, `AgentSteps`, `ToolCallCard`, `StreamingIndicator` |
-| Rich output | `MarkdownRenderer`, `CodeBlock`, `Formula`, `MermaidDiagram` |
-| Runtime | `useAgentChat`, `createAgentStore`, `createSSETransport`, `createMockTransport` |
+| Area                | Primitives                                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------------------------- |
+| Layout and theme    | `AgentShell`, `VeloraProvider`                                                                        |
+| Sessions and drafts | `ConversationList`, `usePromptDrafts`                                                                 |
+| Conversation        | `MessageList`, `MessageBubble`, `MessageActions`, `MessageBranchNavigator`, `PromptComposer`          |
+| Agent process       | `ReasoningPanel`, `AgentSteps`, `ToolCallCard`, `StreamingIndicator`                                  |
+| Rich output         | `MarkdownRenderer`, `CodeBlock`, `Formula`, `MermaidDiagram`                                          |
+| Runtime             | `createAgentRuntime`, `useAgentChat`, `createAgentStore`, `createSSETransport`, `createMockTransport` |
 
 ### Controlled state map
 
 Provide the controlled prop when product state is authoritative; otherwise use the initial prop and observe the same change callback.
 
-| Primitive / state | Controlled | Initial | Change callback |
-| --- | --- | --- | --- |
-| `PromptComposer` draft | `draft` | `defaultDraft` | `onDraftChange` |
-| `ConversationList` session | `activeId` | `defaultActiveId` | `onActiveChange` |
-| `MessageActions` feedback | `feedback` | `defaultFeedback` | `onFeedbackChange` |
-| `MessageBranchNavigator` branch | `index` | `defaultIndex` | `onIndexChange` |
-| `ReasoningPanel` disclosure | `open` | `defaultOpen` | `onOpenChange` |
-| `AgentSteps` disclosures | `expandedStepIds` | `defaultExpandedStepIds` | `onExpandedStepIdsChange` |
-| `ToolCallCard` disclosure | `expanded` | `defaultExpanded` | `onExpandedChange` |
-| `CodeBlock` wrapping | `wrap` | `defaultWrap` | `onWrapChange` |
-| `CodeBlock` collapse | `collapsed` | `defaultCollapsed` | `onCollapsedChange` |
-| `MermaidDiagram` zoom | `zoom` | `defaultZoom` | `onZoomChange` |
-| `AgentShell` mobile panels | `mobileSidebarOpen`, `mobileInspectorOpen` | `defaultMobileSidebarOpen`, `defaultMobileInspectorOpen` | matching `onMobile*OpenChange` callback |
+| Primitive / state               | Controlled                                 | Initial                                                  | Change callback                         |
+| ------------------------------- | ------------------------------------------ | -------------------------------------------------------- | --------------------------------------- |
+| `PromptComposer` draft          | `draft`                                    | `defaultDraft`                                           | `onDraftChange`                         |
+| `ConversationList` session      | `activeId`                                 | `defaultActiveId`                                        | `onActiveChange`                        |
+| `MessageActions` feedback       | `feedback`                                 | `defaultFeedback`                                        | `onFeedbackChange`                      |
+| `MessageBranchNavigator` branch | `index`                                    | `defaultIndex`                                           | `onIndexChange`                         |
+| `ReasoningPanel` disclosure     | `open`                                     | `defaultOpen`                                            | `onOpenChange`                          |
+| `AgentSteps` disclosures        | `expandedStepIds`                          | `defaultExpandedStepIds`                                 | `onExpandedStepIdsChange`               |
+| `ToolCallCard` disclosure       | `expanded`                                 | `defaultExpanded`                                        | `onExpandedChange`                      |
+| `CodeBlock` wrapping            | `wrap`                                     | `defaultWrap`                                            | `onWrapChange`                          |
+| `CodeBlock` collapse            | `collapsed`                                | `defaultCollapsed`                                       | `onCollapsedChange`                     |
+| `MermaidDiagram` zoom           | `zoom`                                     | `defaultZoom`                                            | `onZoomChange`                          |
+| `AgentShell` mobile panels      | `mobileSidebarOpen`, `mobileInspectorOpen` | `defaultMobileSidebarOpen`, `defaultMobileInspectorOpen` | matching `onMobile*OpenChange` callback |
 
 ## State, performance, and accessibility boundaries
 
-- Runtime state belongs to an isolated Zustand vanilla store per surface/workspace; there is no package-global agent store. Use narrow selectors when reading the store directly.
+- Runtime state belongs to an isolated headless runtime per surface/workspace; there is no package-global agent store. Use narrow selectors when reading its Zustand vanilla store directly.
 - Treat conversations, messages, steps, and attachments as immutable. Stable identities allow memoized completed rows to stay out of the streaming render path.
 - Text and reasoning deltas are batched at 16 ms by default. Use `streamBatchMs: 0` only for deterministic tests or an explicit immediate-update requirement.
 - Mermaid is dynamically imported. Keep rich renderers outside the prompt keystroke path and test production traces with realistic token cadence and long output.

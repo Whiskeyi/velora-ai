@@ -883,7 +883,6 @@ export const COMPONENT_API_SPECS: Record<SampleKey, ComponentApiSpec> = {
     importName: "AgentShell",
     props: [
       { name: "children", type: "ReactNode", defaultValue: "—", required: true },
-      { name: "contentMode", type: '"summary" | "trace"', defaultValue: '"summary"' },
       {
         name: "sidebar, header, inspector, composer",
         type: "ReactNode",

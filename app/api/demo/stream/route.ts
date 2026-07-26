@@ -3,9 +3,7 @@ import type { ChatRequest } from "@velora-ai/react";
 const encoder = new TextEncoder();
 
 function frame(event: string, payload: unknown, id: number): Uint8Array {
-  return encoder.encode(
-    `id: ${id}\nevent: ${event}\ndata: ${JSON.stringify(payload)}\n\n`,
-  );
+  return encoder.encode(`id: ${id}\nevent: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
 }
 
 function wait(duration: number, signal: AbortSignal): Promise<void> {
@@ -93,7 +91,7 @@ export async function POST(request: Request): Promise<Response> {
             "Preparing the smallest complete interface plan.",
           ]) {
             await wait(90, streamAbort.signal);
-            send("reasoning-delta", { delta });
+            send("reasoning-summary-delta", { delta });
           }
 
           send("step-update", {
@@ -134,8 +132,7 @@ export async function POST(request: Request): Promise<Response> {
             send("error", {
               error: {
                 code: "DEMO_STREAM_ERROR",
-                message:
-                  error instanceof Error ? error.message : "Demo stream failed",
+                message: error instanceof Error ? error.message : "Demo stream failed",
                 retryable: true,
               },
             });

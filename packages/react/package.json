@@ -2,6 +2,18 @@
   "name": "@velora-ai/react",
   "version": "0.1.0",
   "description": "Streaming-first React primitives for agentic AI products.",
+  "keywords": [
+    "agent",
+    "ai",
+    "react",
+    "sse",
+    "streaming",
+    "ui-components"
+  ],
+  "homepage": "https://ai.components.zhuchj.com/",
+  "bugs": {
+    "url": "https://github.com/Whiskeyi/velora-ai/issues"
+  },
   "license": "MIT",
   "author": "Velora AI Contributors",
   "repository": {
@@ -9,26 +21,14 @@
     "url": "git+https://github.com/Whiskeyi/velora-ai.git",
     "directory": "packages/react"
   },
-  "homepage": "https://ai.components.zhuchj.com/",
-  "bugs": {
-    "url": "https://github.com/Whiskeyi/velora-ai/issues"
-  },
-  "keywords": [
-    "ai",
-    "agent",
-    "react",
-    "sse",
-    "streaming",
-    "ui-components"
-  ],
-  "type": "module",
-  "sideEffects": [
-    "**/*.css"
-  ],
   "files": [
     "dist",
     "README.md",
     "LICENSE"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
   ],
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
@@ -74,16 +74,13 @@
       "types": "./dist/mermaid-entry.d.mts",
       "import": "./dist/mermaid-entry.mjs"
     },
-    "./styles.css": "./dist/style.css"
+    "./styles.css": "./dist/style.css",
+    "./rich-content.css": "./dist/rich-content.css"
   },
   "publishConfig": {
     "access": "public",
-    "registry": "https://registry.npmjs.org/",
-    "provenance": true
-  },
-  "peerDependencies": {
-    "react": ">=18.3.0",
-    "react-dom": ">=18.3.0"
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
     "katex": "^0.16.22",
@@ -93,5 +90,9 @@
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
     "zustand": "^5.0.8"
+  },
+  "peerDependencies": {
+    "react": ">=18.3.0",
+    "react-dom": ">=18.3.0"
   }
 }

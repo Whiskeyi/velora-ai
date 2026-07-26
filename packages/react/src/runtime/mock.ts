@@ -35,9 +35,7 @@ export type MockResponseResolver = (
 
 export type MockEventResolver = (
   context: MockResponseContext,
-) =>
-  | readonly AgentStreamEvent[]
-  | Promise<readonly AgentStreamEvent[]>;
+) => readonly AgentStreamEvent[] | Promise<readonly AgentStreamEvent[]>;
 
 export interface MockTransportOptions {
   /** Text, structured response, or a deterministic resolver for each request. */
@@ -79,19 +77,13 @@ function normalizeChunkSizes(
   label: string,
 ): readonly number[] {
   const sizes = typeof value === "number" ? [value] : (value ?? fallback);
-  if (
-    sizes.length === 0 ||
-    sizes.some((size) => !Number.isInteger(size) || size <= 0)
-  ) {
+  if (sizes.length === 0 || sizes.some((size) => !Number.isInteger(size) || size <= 0)) {
     throw new RangeError(`${label} must contain positive integers`);
   }
   return [...sizes];
 }
 
-function splitIntoChunks(
-  value: string,
-  sizes: readonly number[],
-): readonly string[] {
+function splitIntoChunks(value: string, sizes: readonly number[]): readonly string[] {
   const codePoints = Array.from(value);
   const chunks: string[] = [];
   let offset = 0;
@@ -108,9 +100,7 @@ function splitIntoChunks(
 function responseContext(request: ChatRequest): MockResponseContext {
   return {
     request,
-    lastUserMessage: [...request.messages]
-      .reverse()
-      .find((message) => message.role === "user"),
+    lastUserMessage: [...request.messages].reverse().find((message) => message.role === "user"),
   };
 }
 
@@ -118,8 +108,7 @@ async function resolveResponse(
   response: MockTransportOptions["response"],
   context: MockResponseContext,
 ): Promise<MockAgentResponse> {
-  const resolved =
-    typeof response === "function" ? await response(context) : response;
+  const resolved = typeof response === "function" ? await response(context) : response;
   if (typeof resolved === "string") {
     return { content: resolved };
   }
@@ -144,13 +133,11 @@ function buildEvents(
   contentChunkSizes: readonly number[],
   reasoningChunkSizes: readonly number[],
 ): readonly AgentStreamEvent[] {
-  const events: AgentStreamEvent[] = [
-    { type: "start", messageId: request.responseMessageId },
-  ];
+  const events: AgentStreamEvent[] = [{ type: "start", messageId: request.responseMessageId }];
 
   if (response.reasoning) {
     for (const delta of splitIntoChunks(response.reasoning, reasoningChunkSizes)) {
-      events.push({ type: "reasoning-delta", delta });
+      events.push({ type: "reasoning-summary-delta", delta });
     }
   }
 
@@ -181,9 +168,7 @@ function buildEvents(
  * Creates a deterministic in-memory stream. The same request and options yield
  * the same chunks and event order, which keeps demos and tests reproducible.
  */
-export function createMockTransport(
-  options: MockTransportOptions = {},
-): AgentTransport {
+export function createMockTransport(options: MockTransportOptions = {}): AgentTransport {
   if (
     options.initialDelayMs !== undefined &&
     (!Number.isFinite(options.initialDelayMs) || options.initialDelayMs < 0)
@@ -196,11 +181,7 @@ export function createMockTransport(
   ) {
     throw new RangeError("delayMs must be a non-negative number");
   }
-  const contentChunkSizes = normalizeChunkSizes(
-    options.chunkSize,
-    [3, 5, 4],
-    "chunkSize",
-  );
+  const contentChunkSizes = normalizeChunkSizes(options.chunkSize, [3, 5, 4], "chunkSize");
   const reasoningChunkSizes = normalizeChunkSizes(
     options.reasoningChunkSize ?? options.chunkSize,
     contentChunkSizes,
@@ -227,12 +208,7 @@ export function createMockTransport(
             : scripted;
       } else {
         const response = await resolveResponse(options.response, context);
-        events = buildEvents(
-          request,
-          response,
-          contentChunkSizes,
-          reasoningChunkSizes,
-        );
+        events = buildEvents(request, response, contentChunkSizes, reasoningChunkSizes);
       }
 
       for (let index = 0; index < events.length; index += 1) {

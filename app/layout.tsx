@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "@velora-ai/react/styles.css";
+import "@velora-ai/react/rich-content.css";
 
 export const metadata: Metadata = {
   title: {
@@ -9,20 +10,12 @@ export const metadata: Metadata = {
   },
   description:
     "A streaming-first React component system for precise, expressive agentic interfaces.",
-  keywords: [
-    "AI UI",
-    "React components",
-    "agent interface",
-    "streaming UI",
-    "SSE",
-    "Vite+",
-  ],
+  keywords: ["AI UI", "React components", "agent interface", "streaming UI", "SSE", "Vite+"],
   authors: [{ name: "Velora AI Contributors" }],
   openGraph: {
     type: "website",
     title: "Velora AI — Interfaces for intelligence in motion",
-    description:
-      "Streaming-first React primitives for precise, expressive agentic interfaces.",
+    description: "Streaming-first React primitives for precise, expressive agentic interfaces.",
     images: [
       {
         url: "/og.png",

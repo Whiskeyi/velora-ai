@@ -14,6 +14,8 @@ export type Sample = {
   code: string;
 };
 
+export type SampleMeta = Omit<Sample, "code" | "eyebrow" | "description">;
+
 export type ComponentDoc = {
   eyebrow: string;
   description: string;

@@ -1154,6 +1154,7 @@ main {
 }
 
 .preview-pane {
+  grid-template-rows: 36px auto minmax(0, 1fr);
   border-right: 1px solid var(--line);
 }
 
@@ -1222,6 +1223,63 @@ main {
   color: #b8c2d5;
 }
 
+.preview-environment-controls {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(4, 7, 12, 0.62);
+  scrollbar-width: none;
+}
+
+.preview-environment-controls::-webkit-scrollbar {
+  display: none;
+}
+
+.preview-environment-controls label {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+}
+
+.preview-environment-controls label > span {
+  color: #68748a;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.preview-environment-controls :where(select, button) {
+  min-height: 26px;
+  padding: 4px 8px;
+  border: 1px solid rgba(207, 219, 255, 0.1);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #9ba7bc;
+  font: 500 8px/1 var(--font-mono);
+  white-space: nowrap;
+}
+
+.preview-environment-controls button {
+  cursor: pointer;
+}
+
+.preview-environment-controls :where(select, button):hover {
+  border-color: rgba(159, 180, 255, 0.28);
+  color: #d9e1f1;
+}
+
+.preview-environment-controls button[aria-pressed="true"] {
+  border-color: rgba(127, 150, 255, 0.4);
+  background: rgba(127, 150, 255, 0.11);
+  color: #cdd7ff;
+}
+
 .live-preview-shell {
   position: relative;
   display: grid;
@@ -1254,6 +1312,14 @@ main {
   width: 36%;
   height: 30%;
   background: rgba(139, 79, 201, 0.08);
+}
+
+.preview-environment {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
 }
 
 .live-preview {
@@ -1572,8 +1638,7 @@ main {
   padding: 0;
   border-top: 1px solid var(--line);
   background:
-    linear-gradient(135deg, rgba(123, 150, 255, 0.055), transparent 30%),
-    rgba(255, 255, 255, 0.014);
+    linear-gradient(135deg, rgba(123, 150, 255, 0.055), transparent 30%), rgba(255, 255, 255, 0.014);
 }
 
 .doc-summary {
@@ -1610,7 +1675,9 @@ main {
 
 .doc-summary-chevron {
   color: #6f7b92;
-  transition: transform 160ms ease, color 160ms ease;
+  transition:
+    transform 160ms ease,
+    color 160ms ease;
 }
 
 .component-doc-panel[open] .doc-summary-chevron {
@@ -1758,8 +1825,7 @@ main {
   padding: 18px;
   border-radius: 22px;
   background:
-    linear-gradient(145deg, rgba(127, 150, 255, 0.075), transparent 38%),
-    rgba(9, 12, 18, 0.72);
+    linear-gradient(145deg, rgba(127, 150, 255, 0.075), transparent 38%), rgba(9, 12, 18, 0.72);
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
@@ -1830,8 +1896,7 @@ main {
   border-radius: 24px;
   background:
     radial-gradient(circle at 9% 0%, rgba(127, 150, 255, 0.105), transparent 28rem),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.05), transparent 42%),
-    rgba(12, 16, 24, 0.66);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.05), transparent 42%), rgba(12, 16, 24, 0.66);
 }
 
 .api-card-head {
@@ -2163,6 +2228,31 @@ main {
 .component-detail-sidebar > div {
   display: grid;
   gap: 3px;
+}
+
+.component-detail-search {
+  display: block;
+}
+
+.component-detail-search input {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(207, 219, 255, 0.1);
+  border-radius: 9px;
+  outline: none;
+  background: rgba(5, 8, 13, 0.45);
+  color: #dce4f4;
+  font: 500 10px/1 var(--font-sans);
+}
+
+.component-detail-search input::placeholder {
+  color: #657087;
+}
+
+.component-detail-search input:focus-visible {
+  border-color: rgba(127, 150, 255, 0.52);
+  box-shadow: 0 0 0 3px rgba(127, 150, 255, 0.1);
 }
 
 .component-detail-sidebar strong {
@@ -3096,6 +3186,14 @@ main {
     gap: 4px;
   }
 
+  .component-detail-search {
+    flex: 0 0 154px;
+  }
+
+  .component-detail-search input {
+    min-height: 44px;
+  }
+
   .component-detail-sidebar strong {
     display: none;
   }
@@ -3322,8 +3420,7 @@ main {
   .mobile-workbench-tabs button[aria-selected="true"] {
     border-color: rgba(165, 187, 255, 0.14);
     background:
-      linear-gradient(145deg, rgba(127, 150, 255, 0.13), transparent),
-      rgba(255, 255, 255, 0.045);
+      linear-gradient(145deg, rgba(127, 150, 255, 0.13), transparent), rgba(255, 255, 255, 0.045);
     color: #dfe7f8;
     box-shadow: inset 0 1px rgba(255, 255, 255, 0.06);
   }
@@ -3576,5 +3673,35 @@ main {
   .status-dot,
   .stable-badge span {
     forced-color-adjust: none;
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-panel,
+  .nav-shell,
+  .agent-window {
+    background: var(--ink-2);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass-panel,
+  .nav-shell,
+  .agent-window {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--ink-2);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --line: rgba(255, 255, 255, 0.42);
+    --line-bright: rgba(255, 255, 255, 0.7);
+    --muted: #c2cada;
+  }
+  :focus-visible {
+    outline-width: 3px;
+    outline-offset: 3px;
   }
 }

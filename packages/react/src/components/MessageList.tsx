@@ -32,8 +32,8 @@ export type MessageListEmptyPlacement = "start" | "center";
 export interface MessageListWindowingOptions {
   /** Message count at which windowing starts. Defaults to 200. */
   threshold?: number;
-  /** Estimated rendered row height including spacing. Defaults to 112px. */
-  estimateRowHeight?: number;
+  /** Estimated rendered row height including spacing, or a per-message estimator. */
+  estimateRowHeight?: number | ((message: AgentMessage, index: number) => number);
   /** Extra rows rendered before and after the viewport. Defaults to 6. */
   overscan?: number;
 }
@@ -174,6 +174,30 @@ function messageHasChanged(previous: AgentMessage, current: AgentMessage): boole
   );
 }
 
+function defaultEstimatedRowHeight(message: AgentMessage): number {
+  const contentLines = Math.max(
+    1,
+    message.content.split("\n").length,
+    Math.ceil(message.content.length / 72),
+  );
+  const richStateHeight =
+    (message.steps?.length ?? 0) * 44 +
+    (message.toolCalls?.length ?? 0) * 96 +
+    (message.reasoning ? Math.min(100, message.reasoning.length / 3) : 0);
+  return Math.min(640, 68 + contentLines * 20 + richStateHeight);
+}
+
+function findOffsetIndex(offsets: readonly number[], target: number): number {
+  let low = 0;
+  let high = Math.max(0, offsets.length - 1);
+  while (low < high) {
+    const middle = Math.floor((low + high + 1) / 2);
+    if ((offsets[middle] ?? 0) <= target) low = middle;
+    else high = middle - 1;
+  }
+  return low;
+}
+
 function MessageListInner(
   {
     messages,
@@ -208,8 +232,7 @@ function MessageListInner(
   const copy = localeMessages.messageList;
   const resolvedEmpty = empty ?? copy.empty;
   const resolvedJumpToLatestLabel = jumpToLatestLabel ?? copy.jumpToLatest;
-  const resolvedFormatNewActivityLabel =
-    formatNewActivityLabel ?? copy.newActivity;
+  const resolvedFormatNewActivityLabel = formatNewActivityLabel ?? copy.newActivity;
   const resolvedAriaLabel = ariaLabel ?? copy.ariaLabel;
   const getLiveAnnouncement = useCallback(
     (message: AgentMessage, context: MessageListLiveActivityContext) => {
@@ -588,31 +611,39 @@ function MessageListInner(
     newActivityCount > 0
       ? copy.newActivity(newActivityCount, resolvedJumpToLatestLabel)
       : resolvedJumpToLatestLabel;
+  const windowOptions = typeof windowing === "object" ? windowing : {};
+  const rowOffsets = useMemo(() => {
+    const estimate = windowOptions.estimateRowHeight;
+    const offsets = [0];
+    messages.forEach((message, index) => {
+      const height =
+        typeof estimate === "function"
+          ? estimate(message, index)
+          : (estimate ?? defaultEstimatedRowHeight(message));
+      offsets.push((offsets[index] ?? 0) + Math.max(24, height));
+    });
+    return offsets;
+  }, [messages, windowOptions.estimateRowHeight]);
   const windowRange = useMemo<MessageListWindowRange>(() => {
-    const options = typeof windowing === "object" ? windowing : {};
-    const threshold = Math.max(1, Math.floor(options.threshold ?? 200));
+    const threshold = Math.max(1, Math.floor(windowOptions.threshold ?? 200));
     if (!windowing || messages.length < threshold) {
       return { start: 0, end: messages.length, total: messages.length };
     }
-    const rowHeight = Math.max(24, options.estimateRowHeight ?? 112);
-    const overscan = Math.max(1, Math.floor(options.overscan ?? 6));
-    const visibleRows = Math.max(1, Math.ceil(viewport.height / rowHeight));
-    const estimatedStart = Math.floor(viewport.scrollTop / rowHeight);
-    const start = Math.max(
-      0,
-      Math.min(messages.length - 1, estimatedStart - overscan),
-    );
-    const end = Math.min(
-      messages.length,
-      start + visibleRows + overscan * 2,
-    );
+    const overscan = Math.max(1, Math.floor(windowOptions.overscan ?? 6));
+    const estimatedStart = findOffsetIndex(rowOffsets, viewport.scrollTop);
+    const estimatedEnd = findOffsetIndex(rowOffsets, viewport.scrollTop + viewport.height);
+    const start = Math.max(0, Math.min(messages.length - 1, estimatedStart - overscan));
+    const end = Math.min(messages.length, Math.max(start + 1, estimatedEnd + overscan + 1));
     return { start, end, total: messages.length };
-  }, [messages.length, viewport.height, viewport.scrollTop, windowing]);
-  const windowOptions = typeof windowing === "object" ? windowing : {};
-  const estimatedRowHeight = Math.max(
-    24,
-    windowOptions.estimateRowHeight ?? 112,
-  );
+  }, [
+    messages.length,
+    rowOffsets,
+    viewport.height,
+    viewport.scrollTop,
+    windowOptions.overscan,
+    windowOptions.threshold,
+    windowing,
+  ]);
 
   useEffect(() => {
     onWindowChange?.(windowRange);
@@ -640,33 +671,30 @@ function MessageListInner(
             {windowRange.start > 0 ? (
               <div
                 className="vl-message-list__spacer"
-                style={{ height: windowRange.start * estimatedRowHeight }}
+                style={{ height: rowOffsets[windowRange.start] ?? 0 }}
                 aria-hidden="true"
                 data-spacer="start"
               />
             ) : null}
-            {messages
-              .slice(windowRange.start, windowRange.end)
-              .map((message, localIndex) => {
-                const index = windowRange.start + localIndex;
-                return (
-                  <MessageListRow
-                    key={message.id}
-                    message={message}
-                    index={index}
-                    groupPosition={getGroupPosition(messages, index)}
-                    isLatest={index === messages.length - 1}
-                    following={following}
-                    renderMessage={renderMessage}
-                  />
-                );
-              })}
+            {messages.slice(windowRange.start, windowRange.end).map((message, localIndex) => {
+              const index = windowRange.start + localIndex;
+              return (
+                <MessageListRow
+                  key={message.id}
+                  message={message}
+                  index={index}
+                  groupPosition={getGroupPosition(messages, index)}
+                  isLatest={index === messages.length - 1}
+                  following={following}
+                  renderMessage={renderMessage}
+                />
+              );
+            })}
             {windowRange.end < messages.length ? (
               <div
                 className="vl-message-list__spacer"
                 style={{
-                  height:
-                    (messages.length - windowRange.end) * estimatedRowHeight,
+                  height: (rowOffsets[messages.length] ?? 0) - (rowOffsets[windowRange.end] ?? 0),
                 }}
                 aria-hidden="true"
                 data-spacer="end"
@@ -702,10 +730,7 @@ function MessageListInner(
           </svg>
           <span>
             {newActivityCount > 0
-              ? resolvedFormatNewActivityLabel(
-                  newActivityCount,
-                  resolvedJumpToLatestLabel,
-                )
+              ? resolvedFormatNewActivityLabel(newActivityCount, resolvedJumpToLatestLabel)
               : resolvedJumpToLatestLabel}
           </span>
         </button>

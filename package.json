@@ -3,29 +3,25 @@
   "version": "0.1.0",
   "private": true,
   "description": "A streaming-first React component system for agentic AI interfaces.",
+  "homepage": "https://ai.components.zhuchj.com/",
+  "bugs": {
+    "url": "https://github.com/Whiskeyi/velora-ai/issues"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Whiskeyi/velora-ai.git"
   },
-  "homepage": "https://ai.components.zhuchj.com/",
-  "bugs": {
-    "url": "https://github.com/Whiskeyi/velora-ai/issues"
-  },
-  "type": "module",
-  "packageManager": "npm@11.16.0",
-  "engines": {
-    "node": "^20.19.0 || ^22.18.0 || >=24.11.0"
-  },
   "workspaces": [
     "packages/*"
   ],
+  "type": "module",
   "scripts": {
     "dev": "vp dev",
-    "build": "vp build",
-    "build:pages": "vp build --config vite.pages.config.ts && node scripts/prepare-pages-routes.mjs",
+    "build": "vp build && node scripts/optimize-site-fonts.mjs dist",
+    "build:pages": "vp build --config vite.pages.config.ts && node scripts/optimize-site-fonts.mjs dist-pages/assets && node scripts/prepare-pages-routes.mjs",
     "build:library": "vp pack && node scripts/optimize-package-css.mjs",
-    "build:all": "npm run build:library && vp build",
+    "build:all": "npm run build:library && npm run build",
     "audit:production": "node scripts/audit-production.mjs",
     "preview": "vp preview",
     "preview:pages": "vp preview --config vite.pages.config.ts --host 127.0.0.1 --port 4174",
@@ -38,8 +34,10 @@
     "verify:architecture": "node scripts/verify-architecture.mjs",
     "verify:package": "node scripts/verify-package.mjs",
     "verify:showcase": "node scripts/verify-showcase-samples.mjs",
+    "verify:api-docs": "node --experimental-strip-types scripts/verify-api-docs.mjs",
     "verify:site-css": "node scripts/verify-site-css.mjs",
     "verify:bundle": "node scripts/check-bundle-size.mjs",
+    "benchmark:runtime": "node scripts/benchmark-runtime.mjs",
     "verify:release": "node scripts/verify-release-version.mjs"
   },
   "dependencies": {
@@ -78,5 +76,9 @@
   "overrides": {
     "vite": "npm:@voidzero-dev/vite-plus-core@0.2.5",
     "vitest": "4.1.10"
-  }
+  },
+  "engines": {
+    "node": "^20.19.0 || ^22.18.0 || >=24.11.0"
+  },
+  "packageManager": "npm@11.16.0"
 }

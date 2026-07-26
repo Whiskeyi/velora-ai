@@ -4,10 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { createMockTransport } from "./mock";
 import { createAgentStore } from "./store";
-import {
-  useAgentChat,
-  type UseAgentChatResult,
-} from "./use-agent-chat";
+import { useAgentChat, type UseAgentChatResult } from "./use-agent-chat";
 import type { AgentTransport, VeloraIdFactory } from "./types";
 
 function renderChat(
@@ -72,9 +69,7 @@ describe("useAgentChat", () => {
   });
 
   it("rejects concurrent sends and aborts the active stream", async () => {
-    const chat = renderChat(
-      createMockTransport({ response: "slow response", delayMs: 50 }),
-    );
+    const chat = renderChat(createMockTransport({ response: "slow response", delayMs: 50 }));
 
     const first = chat.send("first");
     expect(chat.send("second")).toEqual({
@@ -103,11 +98,7 @@ describe("useAgentChat", () => {
     const batchedRun = batched.send("batch");
     if (!batchedRun.accepted) throw new Error("Expected the batched send to start");
     await batchedRun.completion;
-    expect(
-      batched.store.getState().messageVersionByConversation[
-        batched.conversationId
-      ],
-    ).toBe(4);
+    expect(batched.store.getState().messageVersionByConversation[batched.conversationId]).toBe(4);
 
     const immediate = renderChat(createMockTransport({ events }), {
       streamBatchMs: 0,
@@ -115,11 +106,9 @@ describe("useAgentChat", () => {
     const immediateRun = immediate.send("immediate");
     if (!immediateRun.accepted) throw new Error("Expected the immediate send to start");
     await immediateRun.completion;
-    expect(
-      immediate.store.getState().messageVersionByConversation[
-        immediate.conversationId
-      ],
-    ).toBe(6);
+    expect(immediate.store.getState().messageVersionByConversation[immediate.conversationId]).toBe(
+      6,
+    );
   });
 
   it("flushes buffered text before stop marks the message aborted", async () => {
@@ -162,9 +151,7 @@ describe("useAgentChat", () => {
       id: "compose",
       status: "cancelled",
     });
-    expect(state.messagesById[ids[1] ?? ""]?.steps?.[0]?.completedAt).toEqual(
-      expect.any(Number),
-    );
+    expect(state.messagesById[ids[1] ?? ""]?.steps?.[0]?.completedAt).toEqual(expect.any(Number));
   });
 
   it("accepts synchronously and preserves the exact submitted text and attachments", async () => {
@@ -185,8 +172,7 @@ describe("useAgentChat", () => {
 
     expect(result.accepted).toBe(true);
     const stateImmediatelyAfterSend = chat.store.getState();
-    const ids =
-      stateImmediatelyAfterSend.conversationsById[chat.conversationId]?.messageIds ?? [];
+    const ids = stateImmediatelyAfterSend.conversationsById[chat.conversationId]?.messageIds ?? [];
     expect(ids).toHaveLength(2);
     expect(stateImmediatelyAfterSend.messagesById[ids[0] ?? ""]?.content).toBe(
       "\n  const answer = 42;\n",
@@ -195,6 +181,29 @@ describe("useAgentChat", () => {
     await result.completion;
     expect(capturedContent).toBe("\n  const answer = 42;\n");
     expect(capturedAttachment).toBe("spec.md");
+  });
+
+  it("accepts attachment-only requests and strips UI state from provider messages", async () => {
+    let captured: unknown;
+    const transport: AgentTransport = {
+      async *stream(request) {
+        captured = request.messages.at(-1);
+        yield { type: "done" };
+      },
+    };
+    const chat = renderChat(transport);
+    const result = chat.send("", {
+      attachments: [{ id: "image", name: "reference.png", kind: "image" }],
+      metadata: { localPreview: true },
+    });
+    expect(result.accepted).toBe(true);
+    if (!result.accepted) throw new Error("Expected the attachment send to start");
+    await result.completion;
+    expect(captured).toEqual({
+      role: "user",
+      content: "",
+      attachments: [{ id: "image", name: "reference.png", kind: "image" }],
+    });
   });
 
   it("persists the fallback error for error messages without a payload", async () => {
