@@ -19,6 +19,7 @@ jobs:
           cache: true
           run-install: false
       - run: vp install --frozen-lockfile
+      - run: npm run verify:architecture
       - run: vp check
       - run: npm run typecheck
       - run: vp test run

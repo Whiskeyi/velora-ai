@@ -3,34 +3,12 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { createElement } from "react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { renderElementAsync } from "react-live";
+import ts from "typescript";
 
-const expectedSampleKeys = [
-  "agent-shell",
-  "velora-provider",
-  "conversation-list",
-  "prompt-composer",
-  "message-bubble",
-  "message-actions",
-  "message-branch-navigator",
-  "message-list",
-  "reasoning-panel",
-  "agent-steps",
-  "code-block",
-  "formula",
-  "mermaid-diagram",
-  "markdown-renderer",
-  "streaming-indicator",
-  "tool-call-card",
-];
+import { SHOWCASE_SAMPLES } from "../app/showcase/samples-data.mjs";
 
 const componentNames = [
   "AgentShell",
@@ -52,50 +30,51 @@ const componentNames = [
   "usePromptDrafts",
 ];
 
-function extractSamples(source) {
-  const registryStart = source.indexOf("const samples: Sample[] = [");
-  const registryEnd = source.indexOf(
-    "\n];\n\nfunction getSiteBasePath",
-    registryStart,
+function unwrapExpression(node) {
+  let current = node;
+  while (
+    ts.isAsExpression(current) ||
+    ts.isSatisfiesExpression(current) ||
+    ts.isParenthesizedExpression(current)
+  ) {
+    current = current.expression;
+  }
+  return current;
+}
+
+function extractComponentKeys(source) {
+  const sourceFile = ts.createSourceFile(
+    "component-registry.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
   );
 
-  if (registryStart === -1 || registryEnd === -1) {
-    throw new Error("Could not locate the showcase sample registry.");
-  }
-
-  const registry = source.slice(registryStart, registryEnd);
-  const keyPattern = /\bkey:\s*"([^"]+)"/g;
-  const samples = [];
-
-  for (const match of registry.matchAll(keyPattern)) {
-    const key = match[1];
-    const codeMarker = "code: `";
-    const codeStart = registry.indexOf(codeMarker, match.index) + codeMarker.length;
-
-    if (codeStart < codeMarker.length) {
-      throw new Error(`Could not locate the code template for ${key}.`);
-    }
-
-    let cursor = codeStart;
-    while (cursor < registry.length) {
-      if (registry[cursor] === "\\") {
-        cursor += 2;
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        !ts.isIdentifier(declaration.name) ||
+        declaration.name.text !== "COMPONENT_KEYS" ||
+        !declaration.initializer
+      ) {
         continue;
       }
-      if (registry[cursor] === "`") break;
-      cursor += 1;
-    }
 
-    if (cursor >= registry.length) {
-      throw new Error(`Could not find the end of the code template for ${key}.`);
-    }
+      const initializer = unwrapExpression(declaration.initializer);
+      if (!ts.isArrayLiteralExpression(initializer)) break;
 
-    const rawCode = registry.slice(codeStart, cursor);
-    const code = rawCode.replace(/\\([\\`$])/g, "$1");
-    samples.push({ key, code });
+      return initializer.elements.map((element) => {
+        if (!ts.isStringLiteralLike(element)) {
+          throw new Error("COMPONENT_KEYS must contain only string literals.");
+        }
+        return element.text;
+      });
+    }
   }
 
-  return samples;
+  throw new Error("Could not read COMPONENT_KEYS from component-registry.ts.");
 }
 
 function compileAndRender({ key, code }, scope) {
@@ -127,13 +106,18 @@ function compileAndRender({ key, code }, scope) {
   });
 }
 
-const sourcePath = resolve("app/showcase-client.tsx");
+const registryPath = resolve("app/component-registry.ts");
 const packagePath = resolve("packages/react/dist/index.mjs");
-const source = await readFile(sourcePath, "utf8");
-const samples = extractSamples(source);
-const actualKeys = samples.map(({ key }) => key);
+const registrySource = await readFile(registryPath, "utf8");
+const expectedSampleKeys = extractComponentKeys(registrySource);
+const actualKeys = SHOWCASE_SAMPLES.map(({ key }) => key);
+const duplicateKeys = actualKeys.filter((key, index) => actualKeys.indexOf(key) !== index);
 
-if (JSON.stringify(actualKeys) !== JSON.stringify(expectedSampleKeys)) {
+if (duplicateKeys.length > 0) {
+  throw new Error(`Duplicate showcase samples: ${[...new Set(duplicateKeys)].join(", ")}.`);
+}
+
+if (JSON.stringify([...actualKeys].sort()) !== JSON.stringify([...expectedSampleKeys].sort())) {
   throw new Error(
     `Expected the ${expectedSampleKeys.length} showcase samples ${expectedSampleKeys.join(", ")}; found ${actualKeys.join(", ")}.`,
   );
@@ -154,9 +138,11 @@ const scope = {
   useState,
 };
 
-for (const sample of samples) {
+for (const sample of SHOWCASE_SAMPLES) {
   const markupLength = await compileAndRender(sample, scope);
   console.log(`Showcase sample passed: ${sample.key} (${markupLength} SSR characters)`);
 }
 
-console.log(`Verified ${samples.length} React Live showcase samples against the built package.`);
+console.log(
+  `Verified ${SHOWCASE_SAMPLES.length} React Live showcase samples against the built package.`,
+);

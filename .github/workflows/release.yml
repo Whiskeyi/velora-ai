@@ -24,6 +24,7 @@ jobs:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
       - run: vp install --frozen-lockfile
+      - run: npm run verify:architecture
       - run: vp check
       - run: vp test run
       - run: npm run build:library

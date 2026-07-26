@@ -2,19 +2,22 @@
 
 export {
   CodeBlock,
-  Formula,
-  MarkdownRenderer,
-  MermaidDiagram,
   type CodeBlockProps,
   type CodeHighlightContext,
   type CodeHighlighter,
   type CodeHighlightResult,
+  type TrustedHighlightedCode,
+} from "./components/CodeBlock";
+export {
+  Formula,
   type FormulaAlignment,
   type FormulaProps,
-  type MarkdownRendererProps,
+  type SafeKatexOptions,
+} from "./components/Formula";
+export { MarkdownRenderer, type MarkdownRendererProps } from "./components/MarkdownRenderer";
+export {
+  MermaidDiagram,
   type MermaidAlignment,
   type MermaidDiagramProps,
-  type SafeKatexOptions,
   type SafeMermaidConfig,
-  type TrustedHighlightedCode,
-} from "./components";
+} from "./components/MermaidDiagram";

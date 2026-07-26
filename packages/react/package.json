@@ -58,6 +58,22 @@
       "types": "./dist/rich-content-entry.d.mts",
       "import": "./dist/rich-content-entry.mjs"
     },
+    "./rich-content/code-block": {
+      "types": "./dist/code-block-entry.d.mts",
+      "import": "./dist/code-block-entry.mjs"
+    },
+    "./rich-content/formula": {
+      "types": "./dist/formula-entry.d.mts",
+      "import": "./dist/formula-entry.mjs"
+    },
+    "./rich-content/markdown": {
+      "types": "./dist/markdown-entry.d.mts",
+      "import": "./dist/markdown-entry.mjs"
+    },
+    "./rich-content/mermaid": {
+      "types": "./dist/mermaid-entry.d.mts",
+      "import": "./dist/mermaid-entry.mjs"
+    },
     "./styles.css": "./dist/style.css"
   },
   "publishConfig": {

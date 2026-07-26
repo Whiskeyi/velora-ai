@@ -35,6 +35,7 @@
     "test": "vp test run",
     "test:e2e": "playwright test",
     "typecheck": "vp exec tsc --noEmit",
+    "verify:architecture": "node scripts/verify-architecture.mjs",
     "verify:package": "node scripts/verify-package.mjs",
     "verify:showcase": "node scripts/verify-showcase-samples.mjs",
     "verify:site-css": "node scripts/verify-site-css.mjs",

@@ -23,6 +23,30 @@ const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 
 const reactPackageAliases = [
   {
+    find: /^@velora-ai\/react\/rich-content\/code-block$/,
+    replacement: fileURLToPath(
+      new URL("./packages/react/src/code-block-entry.ts", import.meta.url),
+    ),
+  },
+  {
+    find: /^@velora-ai\/react\/rich-content\/formula$/,
+    replacement: fileURLToPath(
+      new URL("./packages/react/src/formula-entry.ts", import.meta.url),
+    ),
+  },
+  {
+    find: /^@velora-ai\/react\/rich-content\/markdown$/,
+    replacement: fileURLToPath(
+      new URL("./packages/react/src/markdown-entry.ts", import.meta.url),
+    ),
+  },
+  {
+    find: /^@velora-ai\/react\/rich-content\/mermaid$/,
+    replacement: fileURLToPath(
+      new URL("./packages/react/src/mermaid-entry.ts", import.meta.url),
+    ),
+  },
+  {
     find: /^@velora-ai\/react\/rich-content$/,
     replacement: fileURLToPath(
       new URL(
@@ -95,6 +119,10 @@ export default defineConfig(({ mode }) => {
         "packages/react/src/transport-entry.ts",
         "packages/react/src/hooks-entry.ts",
         "packages/react/src/rich-content-entry.ts",
+        "packages/react/src/code-block-entry.ts",
+        "packages/react/src/formula-entry.ts",
+        "packages/react/src/markdown-entry.ts",
+        "packages/react/src/mermaid-entry.ts",
         "packages/react/src/velora.css",
       ],
       outDir: "packages/react/dist",

@@ -8,6 +8,9 @@ full-page renders.
 - The package build keeps React and rendering engines external so applications
   can deduplicate and split them.
 - Base interaction components must remain usable before Mermaid is requested.
+- Rich renderers expose granular package subpaths, allowing applications to split
+  CodeBlock, Formula, MarkdownRenderer, and MermaidDiagram at feature boundaries
+  while keeping the aggregate export backward-compatible.
 - A new text delta may update the active message, its status indicator, and the
   scroll sentinel; completed message rows must not re-render.
 - Expensive model output is deferred from the keystroke path.

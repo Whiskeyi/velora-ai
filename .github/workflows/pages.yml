@@ -30,6 +30,7 @@ jobs:
           cache: true
           run-install: false
       - run: vp install --frozen-lockfile
+      - run: npm run verify:architecture
       - run: npm run build:pages
       - run: npm run verify:bundle
       - uses: actions/configure-pages@v5

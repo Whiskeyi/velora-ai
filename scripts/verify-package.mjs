@@ -12,6 +12,10 @@ const subpathEntries = [
   ["./transport", "transport-entry.mjs", false],
   ["./hooks", "hooks-entry.mjs", true],
   ["./rich-content", "rich-content-entry.mjs", true],
+  ["./rich-content/code-block", "code-block-entry.mjs", true],
+  ["./rich-content/formula", "formula-entry.mjs", true],
+  ["./rich-content/markdown", "markdown-entry.mjs", true],
+  ["./rich-content/mermaid", "mermaid-entry.mjs", true],
 ];
 
 const [entry, declarations, style, manifestSource] = await Promise.all([

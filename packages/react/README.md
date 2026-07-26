@@ -14,6 +14,18 @@ React and React DOM 18.3 or newer are peer dependencies. Import the stylesheet o
 import "@velora-ai/react/styles.css";
 ```
 
+Rich output is available from the root and aggregate `rich-content` exports. For
+route-level or feature-level code splitting, use the granular client subpaths so
+loading a code block does not also make Markdown, KaTeX, or Mermaid part of the
+same entry:
+
+```tsx
+import { CodeBlock } from "@velora-ai/react/rich-content/code-block";
+import { Formula } from "@velora-ai/react/rich-content/formula";
+import { MarkdownRenderer } from "@velora-ai/react/rich-content/markdown";
+import { MermaidDiagram } from "@velora-ai/react/rich-content/mermaid";
+```
+
 The project site includes a live-editable workbench and a component API reference. The API reference groups components by foundation, workspace, messages, agent state, and generated content, then lists props, defaults, interaction contracts, and integration guidance.
 
 ## 中文组件使用索引

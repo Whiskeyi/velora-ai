@@ -29,6 +29,18 @@
       "@velora-ai/react/rich-content": [
         "./packages/react/src/rich-content-entry.ts"
       ],
+      "@velora-ai/react/rich-content/code-block": [
+        "./packages/react/src/code-block-entry.ts"
+      ],
+      "@velora-ai/react/rich-content/formula": [
+        "./packages/react/src/formula-entry.ts"
+      ],
+      "@velora-ai/react/rich-content/markdown": [
+        "./packages/react/src/markdown-entry.ts"
+      ],
+      "@velora-ai/react/rich-content/mermaid": [
+        "./packages/react/src/mermaid-entry.ts"
+      ],
       "@velora-ai/react/runtime": ["./packages/react/src/runtime-entry.ts"],
       "@velora-ai/react/transport": ["./packages/react/src/transport-entry.ts"]
     }
