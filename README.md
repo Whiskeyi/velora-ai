@@ -1,5 +1,7 @@
 # Velora AI
 
+[English](README.md) | [Chinese](README.zh-CN.md)
+
 [![CI](https://github.com/Whiskeyi/velora-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Whiskeyi/velora-ai/actions/workflows/ci.yml)
 [![GitHub Pages](https://github.com/Whiskeyi/velora-ai/actions/workflows/pages.yml/badge.svg)](https://github.com/Whiskeyi/velora-ai/actions/workflows/pages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-6d5dfc.svg)](LICENSE)
@@ -14,19 +16,15 @@ The repository contains the publishable `@velora-ai/react` package and a live-ed
 
 The documentation site now separates the live component workbench from a component API reference. The home page keeps a compact component index, while every primitive has an addressable `/components/<component>/` detail page with a live editor, API table, interaction contract, and responsive navigation.
 
-## 中文使用入口
+## Recommended composition
 
-Velora 不是一个固定聊天模板，而是一套可组合的 AI 交互组件库。站点已支持中英文切换：工作台负责可编辑示例，API 文档区按组件分类提供 props、默认值、交互约定、接入建议和跳回实时示例的入口。
+- `VeloraProvider` owns theme tokens, density, motion, semantic classes, and global `en-US` / `zh-CN` component messages.
+- `ConversationList` with `usePromptDrafts` owns session switching and isolated drafts.
+- `MessageList`, `MessageBubble`, and `MarkdownRenderer` own streaming messages, rich output, and reading position.
+- `PromptComposer` owns multimodal drafts, attachments, preflight, submission acceptance, and stopping.
+- `AgentSteps`, `ReasoningPanel`, and `ToolCallCard` own steps, reasoning disclosure, and tool approval.
 
-最常见的组合方式是：
-
-- `VeloraProvider` 负责主题 token、密度、动效、语义 class，以及全局 `en-US` / `zh-CN` 组件文案。
-- `ConversationList` + `usePromptDrafts` 负责会话切换与草稿隔离。
-- `MessageList` + `MessageBubble` + `MarkdownRenderer` 负责流式消息、富文本和阅读位置。
-- `PromptComposer` 负责多模态草稿、附件、预检、发送接受态和停止。
-- `AgentSteps` + `ReasoningPanel` + `ToolCallCard` 负责步骤、思考和工具审批。
-
-接入时请把“发送是否被接受”和“流式生成是否完成”分开处理：`chat.send()` 同步返回 accepted/rejected，成功后再通过 `completion` 观察终态。不要让输入框一直 pending 到整段 SSE 结束。
+Treat submission acceptance and stream completion as separate states. `chat.send()` synchronously returns accepted or rejected; an accepted run exposes `completion` for terminal side effects. Do not keep the composer pending until the entire SSE stream finishes.
 
 ## What is included
 

@@ -12,6 +12,26 @@ test("the hero sends a mock SSE run and switches locale", async ({ page }, testI
   await expect(agent.getByText("Verify the streaming interaction", { exact: true })).toBeVisible();
   await expect(agent.getByText("Response complete", { exact: true })).toBeVisible();
 
+  const layout = await agent.evaluate((element) => {
+    const windowElement = element as HTMLElement;
+    const main = element.querySelector<HTMLElement>(".agent-main");
+    const header = element.querySelector<HTMLElement>(".agent-header");
+    const feed = element.querySelector<HTMLElement>(".agent-feed");
+    const list = element.querySelector<HTMLElement>(".agent-feed .vl-message-list");
+
+    return {
+      windowHeight: windowElement.clientHeight,
+      mainHeight: main?.offsetHeight,
+      headerHeight: header?.offsetHeight,
+      feedTop: feed?.offsetTop,
+      feedHeight: feed?.clientHeight,
+      listHeight: list?.clientHeight,
+    };
+  });
+  expect(layout.mainHeight).toBeLessThanOrEqual(layout.windowHeight);
+  expect(layout.feedTop).toBeGreaterThanOrEqual(layout.headerHeight!);
+  expect(layout.listHeight).toBeLessThanOrEqual(layout.feedHeight!);
+
   await page.getByRole("button", { name: "Switch language: 中文" }).click();
   await expect(agent.getByRole("button", { name: "发送消息" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");

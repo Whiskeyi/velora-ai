@@ -124,8 +124,8 @@ into `@velora-ai/react/rich-content.css` separately.
   callbacks in `agent-runtime.ts`.
 - Components may import runtime contracts, but never the store, runtime, or
   transport implementation.
-- Put browser lifecycle logic behind a hook. The showcase keeps locale
-  persistence in `app/showcase/use-showcase-locale.ts`, route construction in
+- Put browser lifecycle logic behind a hook. The showcase keeps explicit locale
+  resolution and persistence in `app/showcase/use-showcase-locale.ts`, route construction in
   `app/showcase/routing.ts`, optional heavy modules in
   `app/showcase/lazy-components.ts`, deterministic data in
   `app/showcase/demo-fixtures.ts`, and transport selection in

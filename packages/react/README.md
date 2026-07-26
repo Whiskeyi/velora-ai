@@ -1,5 +1,7 @@
 # @velora-ai/react
 
+[English](README.md) | [Chinese](README.zh-CN.md)
+
 Provider-neutral React primitives for production AI conversations and agent workflows. Velora owns interaction mechanics—stream following, prompt drafts, async action states, approval controls, accessible announcements—while the application keeps authority over provider data and business state.
 
 ## Install
@@ -35,28 +37,28 @@ import { MermaidDiagram } from "@velora-ai/react/rich-content/mermaid";
 
 The project site includes a live-editable workbench and a component API reference. The API reference groups components by foundation, workspace, messages, agent state, and generated content, then lists props, defaults, interaction contracts, and integration guidance.
 
-## 中文组件使用索引
+## Component usage index
 
-Velora 的组件按职责拆分，不强制你的后端、模型厂商、上传层或权限系统。
+Velora separates components by responsibility without prescribing a backend, model provider, upload layer, or permission system.
 
-| 组件                     | 负责什么                                                 | 接入重点                                                            |
-| ------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------- |
-| `VeloraProvider`         | 主题、密度、动效、语义 token                             | 在 AI 界面外层包一次，按产品覆盖 tokens                             |
-| `AgentShell`             | 会话侧栏、主对话区、输入区、检查器布局                   | 状态放在业务层，移动端抽屉交给 shell                                |
-| `ConversationList`       | 会话搜索、分组、新建、状态                               | `activeId` 受控，和 `MessageList.conversationKey` 使用同一个会话 ID |
-| `PromptComposer`         | 文本、附件、模型/工具选择、预检、停止                    | `onSubmit` 返回 accepted，不等待完整 stream；附件上传由业务层完成   |
-| `MessageList`            | 流式跟随、阅读锚点、历史 prepend、未读活动、长列表窗口化 | 保持 message ID 稳定，长会话启用 `windowing`                        |
-| `MessageBubble`          | 单条消息外壳、附件、操作、分支、底部信息                 | 富文本正文建议通过 `children` 接 `MarkdownRenderer`                 |
-| `MessageActions`         | 复制、编辑、重新生成、赞踩、异步回滚                     | 组件只管交互状态，真正的数据 mutation 由应用完成                    |
-| `MessageBranchNavigator` | 多候选回复切换                                           | `index` 零基受控，分支内容保存在业务状态里                          |
-| `ReasoningPanel`         | 思考摘要/trace 展开、耗时、错误上下文                    | 默认使用 `contentMode="summary"`，不直接暴露敏感链路                |
-| `AgentSteps`             | 多步骤状态、详情、耗时和 retry                           | 后端 step 事件要保持稳定 ID，避免展开状态跳动                       |
-| `ToolCallCard`           | 工具参数、风险、审批、执行、错误和重试                   | UI 审批不能替代服务端权限和策略检查                                 |
-| `MarkdownRenderer`       | GFM、公式、代码、Mermaid 的渐进渲染                      | 默认不要启用 raw HTML；流式时开启 block 稳定策略                    |
-| `CodeBlock`              | 高亮、复制、换行、折叠、下载                             | 自定义 highlighter 需要净化不可信 HTML                              |
-| `Formula`                | KaTeX 行内/块级公式、复制和错误 fallback                 | 安全字段由组件锁定，使用有限 `maxSize` / `maxExpand`                |
-| `MermaidDiagram`         | Mermaid 懒加载、缩放、复制源、错误恢复                   | 对不可信图表使用 strict 安全配置                                    |
-| `StreamingIndicator`     | 生成中、暂停、进度和完成反馈                             | 放在等待内容附近，不做全局阻塞                                      |
+| Component                  | Responsibility                                             | Integration focus                                                             |
+| -------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `VeloraProvider`           | Theme, density, motion, and semantic tokens                | Wrap the AI surface once and override tokens at the product boundary          |
+| `AgentShell`               | Session sidebar, conversation, composer, and inspector     | Keep state in the application; let the shell own mobile drawers               |
+| `ConversationList`         | Session search, grouping, creation, and status             | Control `activeId` and share its value with `MessageList.conversationKey`      |
+| `PromptComposer`           | Text, attachments, selectors, preflight, submit, and stop  | Return acceptance from `onSubmit`; upload files in the application layer      |
+| `MessageList`              | Stream following, history prepend, activity, and windowing | Keep message IDs stable and enable `windowing` for long conversations          |
+| `MessageBubble`            | Message shell, attachments, actions, branches, and footer  | Render rich content through `children` with `MarkdownRenderer`                 |
+| `MessageActions`           | Copy, edit, regenerate, feedback, and async rollback       | Let the component own interaction state and the application own data mutation |
+| `MessageBranchNavigator`   | Candidate response navigation                              | Control a zero-based `index`; keep branch content in application state         |
+| `ReasoningPanel`           | Reasoning summary or trace disclosure and timing           | Prefer `contentMode="summary"` instead of exposing sensitive traces            |
+| `AgentSteps`               | Step state, detail, timing, and retry                      | Preserve stable step IDs across backend events                                |
+| `ToolCallCard`             | Tool arguments, risk, approval, execution, and retry       | Never treat UI approval as server authorization                               |
+| `MarkdownRenderer`         | Progressive GFM, math, code, and Mermaid rendering         | Keep raw HTML disabled and stabilize incomplete streaming blocks               |
+| `CodeBlock`                | Highlighting, copy, wrapping, collapse, and download       | Sanitize untrusted HTML returned by a custom highlighter                       |
+| `Formula`                  | KaTeX inline/block rendering, copy, and fallback           | Keep bounded `maxSize` and `maxExpand` safety settings                         |
+| `MermaidDiagram`           | Lazy rendering, zoom, source copy, and recovery            | Use strict security settings for untrusted diagrams                           |
+| `StreamingIndicator`       | Generating, paused, progress, and completion feedback      | Place it near the pending content instead of blocking the whole surface        |
 
 ## A complete send lifecycle
 
@@ -123,7 +125,7 @@ export function Chat() {
   };
 
   return (
-    <VeloraProvider theme="system" locale="zh-CN">
+    <VeloraProvider theme="system" locale="en-US">
       <MessageList
         messages={chat.messages}
         renderMessage={(message) => (

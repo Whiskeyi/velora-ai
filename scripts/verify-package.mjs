@@ -7,6 +7,10 @@ const declarationUrl = new URL("dist/index.d.mts", packageRoot);
 const styleUrl = new URL("dist/style.css", packageRoot);
 const richStyleUrl = new URL("dist/rich-content.css", packageRoot);
 const manifestUrl = new URL("package.json", packageRoot);
+const rootReadmeUrl = new URL("../../README.md", packageRoot);
+const rootChineseReadmeUrl = new URL("../../README.zh-CN.md", packageRoot);
+const packageReadmeUrl = new URL("README.md", packageRoot);
+const packageChineseReadmeUrl = new URL("README.zh-CN.md", packageRoot);
 const subpathEntries = [
   ["./components", "components-entry.mjs", true],
   ["./runtime", "runtime-entry.mjs", false],
@@ -19,14 +23,49 @@ const subpathEntries = [
   ["./rich-content/mermaid", "mermaid-entry.mjs", true],
 ];
 
-const [entry, declarations, style, richStyle, manifestSource] = await Promise.all([
+const [
+  entry,
+  declarations,
+  style,
+  richStyle,
+  manifestSource,
+  rootReadme,
+  rootChineseReadme,
+  packageReadme,
+  packageChineseReadme,
+] = await Promise.all([
   readFile(entryUrl, "utf8"),
   readFile(declarationUrl, "utf8"),
   readFile(styleUrl, "utf8"),
   readFile(richStyleUrl, "utf8"),
   readFile(manifestUrl, "utf8"),
+  readFile(rootReadmeUrl, "utf8"),
+  readFile(rootChineseReadmeUrl, "utf8"),
+  readFile(packageReadmeUrl, "utf8"),
+  readFile(packageChineseReadmeUrl, "utf8"),
 ]);
 const manifest = JSON.parse(manifestSource);
+const hanPattern = /\p{Script=Han}/u;
+
+for (const [label, source] of [
+  ["root README.md", rootReadme],
+  ["package README.md", packageReadme],
+]) {
+  if (hanPattern.test(source)) {
+    throw new Error(`${label} must remain English-only; put Chinese content in README.zh-CN.md`);
+  }
+}
+for (const [label, source] of [
+  ["root README.zh-CN.md", rootChineseReadme],
+  ["package README.zh-CN.md", packageChineseReadme],
+]) {
+  if (!hanPattern.test(source)) {
+    throw new Error(`${label} must contain the dedicated Chinese documentation`);
+  }
+}
+if (!manifest.files?.includes("README.zh-CN.md")) {
+  throw new Error("Package manifest must publish README.zh-CN.md");
+}
 
 if (!entry.startsWith('"use client";')) {
   throw new Error("Package entry is missing the React client directive");
@@ -137,5 +176,5 @@ if (manifest.exports?.["./rich-content.css"] !== "./dist/rich-content.css") {
 }
 
 console.log(
-  `Verified ${requiredExports.length} public exports, ${requiredDeclarationTypes.length} public contract types, ${requiredSelectors.length} component selectors, and ${fontPaths.length} font references.`,
+  `Verified ${requiredExports.length} public exports, ${requiredDeclarationTypes.length} public contract types, ${requiredSelectors.length} component selectors, ${fontPaths.length} font references, and separated English/Chinese READMEs.`,
 );

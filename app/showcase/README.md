@@ -10,7 +10,7 @@ implementation.
 - `lazy-components.ts` owns optional editor and rich-content chunks.
 - `prop-description.ts` maps documented API aliases to table descriptions.
 - `routing.ts` owns base-path-safe site links.
-- `use-showcase-locale.ts` owns browser locale detection and persistence.
+- `use-showcase-locale.ts` owns explicit locale resolution and persistence.
 - `showcase-client.tsx` composes page sections and interactive demo state.
 
 Keep examples on public `@velora-ai/react` entrypoints. Reusable behavior belongs

@@ -7,6 +7,7 @@ import {
   localizeDemoMessages,
 } from "./demo-fixtures";
 import { getPropDescription } from "./prop-description";
+import { resolveShowcaseLocale } from "./use-showcase-locale";
 
 describe("showcase infrastructure", () => {
   it("localizes seeded messages without changing their identity", () => {
@@ -66,5 +67,12 @@ describe("showcase infrastructure", () => {
     expect(getPropDescription(doc, "onChange", "zh")).toBe(
       "配置 onChange。类型、默认值与是否必填以本行定义为准。",
     );
+  });
+
+  it("defaults to English while respecting explicit language choices", () => {
+    expect(resolveShowcaseLocale("", null)).toBe("en");
+    expect(resolveShowcaseLocale("", "zh")).toBe("zh");
+    expect(resolveShowcaseLocale("?lang=en", "zh")).toBe("en");
+    expect(resolveShowcaseLocale("?lang=zh", "en")).toBe("zh");
   });
 });

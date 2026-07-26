@@ -1,28 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Locale } from "./model";
 
-function getInitialLocale(): Locale {
-  const requested = new URLSearchParams(window.location.search).get("lang");
+const SHOWCASE_LOCALE_PREFERENCE_KEY = "velora-locale-preference";
+
+export function resolveShowcaseLocale(search: string, savedLocale: string | null): Locale {
+  const requested = new URLSearchParams(search).get("lang");
   if (requested === "en" || requested === "zh") return requested;
-  const saved = window.localStorage.getItem("velora-locale");
-  if (saved === "en" || saved === "zh") return saved;
-  return window.navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
+  if (savedLocale === "en" || savedLocale === "zh") return savedLocale;
+  return "en";
+}
+
+function getInitialLocale(): Locale {
+  return resolveShowcaseLocale(
+    window.location.search,
+    window.localStorage.getItem(SHOWCASE_LOCALE_PREFERENCE_KEY),
+  );
 }
 
 export function useShowcaseLocale() {
-  const [locale, setLocale] = useState<Locale>("en");
+  const [locale, setLocaleState] = useState<Locale>("en");
   const [localeReady, setLocaleReady] = useState(false);
+  const setLocale = useCallback((nextLocale: Locale) => {
+    window.localStorage.setItem(SHOWCASE_LOCALE_PREFERENCE_KEY, nextLocale);
+    setLocaleState(nextLocale);
+  }, []);
 
   useEffect(() => {
-    setLocale(getInitialLocale());
+    setLocaleState(getInitialLocale());
     setLocaleReady(true);
   }, []);
 
   useEffect(() => {
     if (!localeReady) return;
-    window.localStorage.setItem("velora-locale", locale);
     document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
     const url = new URL(window.location.href);
     url.searchParams.set("lang", locale);

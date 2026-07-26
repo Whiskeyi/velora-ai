@@ -704,6 +704,8 @@ main {
   display: grid;
   grid-template-rows: 67px minmax(0, 1fr) auto auto;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   background:
     radial-gradient(circle at 68% 8%, rgba(105, 125, 226, 0.08), transparent 17rem),
     rgba(10, 13, 20, 0.35);
@@ -758,15 +760,23 @@ main {
 
 .agent-feed {
   position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   min-height: 0;
-  overflow: hidden auto;
-  padding: 17px 18px 9px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.09) transparent;
+  overflow: hidden;
+}
+
+.agent-feed > .vl-message-list {
+  min-height: 0;
+}
+
+.agent-feed .vl-message-list__content {
+  padding: 26px 18px 22px;
 }
 
 .hero-streaming {
-  margin: 8px 0 0 28px;
+  margin: 0;
+  padding: 8px 46px 2px;
 }
 
 .agent-stream-error {
@@ -774,7 +784,7 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 10px 0 0;
+  margin: 8px 18px 0;
   padding: 9px 11px;
   border: 1px solid rgba(255, 130, 148, 0.16);
   border-radius: 10px;
@@ -3313,10 +3323,21 @@ main {
     grid-template-rows: 64px minmax(0, 1fr) auto auto;
   }
 
-  .agent-feed,
   .agent-composer {
     padding-right: 13px;
     padding-left: 13px;
+  }
+
+  .agent-feed .vl-message-list__content {
+    padding: 22px 13px 18px;
+  }
+
+  .hero-streaming {
+    padding-inline: 41px;
+  }
+
+  .agent-stream-error {
+    margin-inline: 13px;
   }
 
   .agent-context-row {
