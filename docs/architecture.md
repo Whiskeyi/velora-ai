@@ -30,7 +30,7 @@ flowchart LR
 | Contracts | `runtime/types.ts` | Messages, events, request and tool types | I/O, React, mutable state |
 | Wire | `runtime/abort.ts`, `sse.ts`, `transport.ts`, `mock.ts` | Abort semantics, SSE decoding, provider adapters | UI state or React |
 | State | `runtime/store.ts`, `persistence.ts` | Normalized entities, selectors, persistence | Network requests |
-| Event reduction | `runtime/stream-events.ts` | Pure event-to-state transitions | Stream iteration or component effects |
+| Event reduction | `runtime/stream-events.ts` | Deterministic event-to-state transitions | Stream iteration or component effects |
 | Orchestration | `runtime/agent-runtime.ts` | Run lifecycle, batching, cancellation and callbacks | JSX or hook lifecycle |
 | React adapter | `runtime/use-agent-chat.ts` | Runtime subscription and hook ergonomics | Transport parsing |
 | Components | `components/` | Accessible interaction and presentation | Request orchestration |
