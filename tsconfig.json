@@ -21,7 +21,16 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@velora-ai/react": ["./packages/react/src/index.ts"]
+      "@velora-ai/react": ["./packages/react/src/index.ts"],
+      "@velora-ai/react/components": [
+        "./packages/react/src/components-entry.ts"
+      ],
+      "@velora-ai/react/hooks": ["./packages/react/src/hooks-entry.ts"],
+      "@velora-ai/react/rich-content": [
+        "./packages/react/src/rich-content-entry.ts"
+      ],
+      "@velora-ai/react/runtime": ["./packages/react/src/runtime-entry.ts"],
+      "@velora-ai/react/transport": ["./packages/react/src/transport-entry.ts"]
     }
   },
   "include": [
