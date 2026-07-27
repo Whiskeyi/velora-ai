@@ -393,8 +393,8 @@ main {
   transform: translateX(-50%);
   opacity: 0.3;
   background-image:
-    linear-gradient(rgba(180, 198, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(180, 198, 255, 0.06) 1px, transparent 1px);
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
   background-size: 72px 72px;
   mask-image: radial-gradient(ellipse 74% 58% at 74% 41%, black 6%, transparent 72%);
 }
@@ -3448,7 +3448,7 @@ main {
     gap: 4px;
     padding: 8px;
     border-bottom: 1px solid var(--line);
-    background: rgba(5, 8, 13, 0.36);
+    background: var(--glass-soft);
   }
 
   .mobile-workbench-tabs button {
@@ -3461,7 +3461,7 @@ main {
     border: 1px solid transparent;
     border-radius: 12px;
     background: transparent;
-    color: #748096;
+    color: var(--muted);
     cursor: pointer;
     font-family: var(--font-mono);
     font-size: 9px;
@@ -3475,10 +3475,10 @@ main {
   }
 
   .mobile-workbench-tabs button[aria-selected="true"] {
-    border-color: rgba(165, 187, 255, 0.14);
+    border-color: var(--line-bright);
     background:
-      linear-gradient(145deg, rgba(127, 150, 255, 0.13), transparent), rgba(255, 255, 255, 0.045);
-    color: #dfe7f8;
+      linear-gradient(145deg, rgba(127, 150, 255, 0.13), transparent), var(--glass);
+    color: var(--paper);
     box-shadow: inset 0 1px rgba(255, 255, 255, 0.06);
   }
 
@@ -3692,10 +3692,6 @@ main {
 }
 
 /* The site chrome follows the persisted preference; live previews can override it. */
-html[data-showcase-theme="light"] {
-  background: var(--ink-0);
-}
-
 html[data-showcase-theme="light"] body {
   background:
     radial-gradient(circle at 76% 7%, rgba(93, 112, 221, 0.13), transparent 27rem),

@@ -4,6 +4,18 @@ import { resolve } from "node:path";
 
 const outputDirectory = resolve(import.meta.dirname, "..", "dist-pages");
 const html = await readFile(resolve(outputDirectory, "index.html"), "utf8");
+const requiredThemeMarkup = [
+  'data-showcase-theme="dark"',
+  "velora-theme-preference",
+  "prefers-color-scheme: dark",
+  'meta[name="theme-color"]',
+];
+const missingThemeMarkup = requiredThemeMarkup.filter((value) => !html.includes(value));
+if (missingThemeMarkup.length > 0) {
+  throw new Error(
+    `Pages HTML is missing pre-paint theme initialization: ${missingThemeMarkup.join(", ")}`,
+  );
+}
 const manifest = JSON.parse(
   await readFile(resolve(outputDirectory, ".vite", "manifest.json"), "utf8"),
 );
