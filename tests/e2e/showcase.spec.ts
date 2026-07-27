@@ -10,6 +10,21 @@ test("the site theme follows the system, switches, and persists", async ({ page 
   await expect(root).toHaveAttribute("data-showcase-theme", "dark");
   await expect(provider).toHaveAttribute("data-vl-theme", "dark");
 
+  const darkComposerLuminance = await page
+    .locator(".vl-prompt-composer__surface")
+    .first()
+    .evaluate((element) => {
+      const value = getComputedStyle(element).backgroundColor;
+      const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [];
+      const normalized = value.startsWith("color(srgb")
+        ? channels.map((channel) => channel * 255)
+        : channels;
+      return (
+        normalized[0]! * 0.2126 + normalized[1]! * 0.7152 + normalized[2]! * 0.0722
+      );
+    });
+  expect(darkComposerLuminance).toBeLessThan(32);
+
   await page.getByRole("button", { name: "Switch to light theme" }).click();
   await expect(root).toHaveAttribute("data-showcase-theme", "light");
   await expect(provider).toHaveAttribute("data-vl-theme", "light");
