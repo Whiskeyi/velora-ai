@@ -14,6 +14,14 @@ Velora 不是固定的聊天模板。它将与模型供应商无关的事件和�
 
 [打开在线组件工作台](https://ai.components.zhuchj.com/) · [阅读中文包 API 指南](packages/react/README.zh-CN.md)
 
+## 界面预览
+
+[![Velora AI 组件工作台深色模式](docs/assets/screenshots/showcase-dark.png)](https://ai.components.zhuchj.com/)
+
+| 组件 API 与实时编辑器 | 浅色运行时架构 |
+| --- | --- |
+| [![PromptComposer 详情页、实时预览与可编辑源码](docs/assets/screenshots/prompt-composer-dark.png)](https://ai.components.zhuchj.com/components/prompt-composer/) | [![Velora 浅色模式运行时架构](docs/assets/screenshots/runtime-light.png)](https://ai.components.zhuchj.com/#runtime) |
+
 文档站将实时组件工作台与组件 API 文档分开。首页保留紧凑的组件索引，每个组件都有独立的 `/components/<component>/` 详情页，包含实时编辑器、API 表格、交互约定和响应式导航。
 
 文档站首次访问时跟随系统配色，并在导航栏提供可持久化的浅色/深色切换。实时工作台还可以独立覆盖主题、密度、方向和减少动效设置，便于在不改变文档外观的情况下验证每个组件契约。
