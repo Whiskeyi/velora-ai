@@ -15,6 +15,23 @@ test("the site theme follows the system, switches, and persists", async ({ page 
   await expect(provider).toHaveAttribute("data-vl-theme", "light");
   await expect(page.getByRole("button", { name: "Switch to dark theme" })).toBeVisible();
 
+  const lightSurfaceColors = await page
+    .locator(".runtime-code, .pipeline-spine span")
+    .evaluateAll((elements) =>
+      elements.map((element) => getComputedStyle(element).backgroundColor),
+    );
+  expect(lightSurfaceColors.every((color) => color.includes("255") || color.includes("247"))).toBe(
+    true,
+  );
+  await expect(page.locator(".access-visual kbd").first()).toHaveCSS(
+    "background-image",
+    /rgb\(228, 233, 242\).*rgb\(255, 255, 255\)/,
+  );
+  await expect(page.locator(".footer-actions .primary-button")).toHaveCSS(
+    "color",
+    "rgb(16, 20, 31)",
+  );
+
   await page.reload();
   await expect(root).toHaveAttribute("data-showcase-theme", "light");
   await expect(provider).toHaveAttribute("data-vl-theme", "light");
@@ -23,6 +40,11 @@ test("the site theme follows the system, switches, and persists", async ({ page 
   await expect(root).toHaveAttribute("data-showcase-theme", "light");
   await expect(provider).toHaveAttribute("data-vl-theme", "light");
   await expect(page.locator(".vl-mermaid__canvas svg")).toBeVisible();
+  await expect(page.locator(".live-editor pre")).toHaveCSS("color", "rgb(52, 64, 84)");
+  await expect(page.locator(".code-pane")).toHaveCSS(
+    "background-color",
+    "rgba(247, 249, 253, 0.72)",
+  );
 });
 
 test("the hero sends a mock SSE run and switches locale", async ({ page }, testInfo) => {

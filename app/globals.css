@@ -1619,7 +1619,7 @@ main {
 }
 
 .code-pane {
-  background: rgba(5, 7, 11, 0.7);
+  background: var(--glass-soft);
 }
 
 .code-pane-bar button {
@@ -2061,10 +2061,10 @@ main {
   margin: 0;
   overflow: auto;
   padding: 14px;
-  border: 1px solid rgba(198, 213, 255, 0.08);
+  border: 1px solid var(--line);
   border-radius: 13px;
-  background: rgba(3, 5, 9, 0.68);
-  color: #aeb9ce;
+  background: var(--glass-soft);
+  color: var(--muted-bright);
   font-size: 9px;
   line-height: 1.7;
   white-space: pre;
@@ -2429,12 +2429,7 @@ main {
 .runtime-code {
   margin-top: 35px;
   overflow: hidden;
-  border: 1px solid rgba(210, 221, 255, 0.1);
   border-radius: 16px;
-  background: rgba(6, 9, 14, 0.68);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 22px 70px rgba(0, 0, 0, 0.24);
 }
 
 .runtime-code-bar {
@@ -2469,7 +2464,7 @@ main {
 }
 
 .runtime-code-bar > code {
-  color: #535e72;
+  color: var(--muted);
   font-size: 8px;
 }
 
@@ -2477,22 +2472,22 @@ main {
   margin: 0;
   overflow-x: auto;
   padding: 19px;
-  color: #aeb7ca;
+  color: var(--muted-bright);
   font-size: 9px;
   line-height: 1.75;
 }
 
 .code-purple {
-  color: #b895ff;
+  color: var(--violet);
 }
 .code-blue {
-  color: #82b1ff;
+  color: var(--blue-bright);
 }
 .code-green {
-  color: #84d8af;
+  color: var(--green);
 }
 .code-muted {
-  color: #566075;
+  color: var(--muted);
 }
 
 .pipeline {
@@ -2521,10 +2516,10 @@ main {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border: 1px solid rgba(153, 174, 255, 0.18);
+  border: 1px solid var(--line-bright);
   border-radius: 9px;
-  background: #0b0f17;
-  color: #8397e4;
+  background: var(--ink-2);
+  color: var(--blue);
   font-family: var(--font-mono);
   font-size: 7px;
   box-shadow: 0 0 18px rgba(92, 118, 226, 0.12);
@@ -2773,11 +2768,11 @@ main {
 
 .access-visual kbd {
   padding: 11px 10px;
-  border: 1px solid rgba(198, 213, 255, 0.16);
+  border: 1px solid var(--line-bright);
   border-bottom-width: 3px;
   border-radius: 10px;
-  background: linear-gradient(#171d29, #0d1119);
-  color: #aab6ce;
+  background: linear-gradient(var(--ink-3), var(--ink-2));
+  color: var(--muted-bright);
   font-size: 8px;
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.25);
 }
@@ -2868,7 +2863,7 @@ main {
   cursor: pointer;
 }
 
-.footer-actions > a {
+.footer-actions > a:not(.primary-button) {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -3754,7 +3749,7 @@ html[data-showcase-theme="light"]
     .pipeline-card p,
     .principle-card p,
     .footer-cta p,
-    .footer-actions > a,
+    .footer-actions > a:not(.primary-button),
     .footer-bottom
   ) {
   color: #657188;
@@ -3797,13 +3792,6 @@ html[data-showcase-theme="light"] :is(.nav-links a, .nav-github) {
 html[data-showcase-theme="light"] .nav-links a:hover {
   background: rgba(56, 69, 98, 0.055);
   color: #172033;
-}
-
-html[data-showcase-theme="light"] :is(.nav-cta, .primary-button) {
-  border-color: rgba(48, 62, 94, 0.12);
-  background: linear-gradient(180deg, #26334f, #182239);
-  color: #f7f9ff;
-  box-shadow: 0 10px 25px rgba(50, 65, 99, 0.2);
 }
 
 html[data-showcase-theme="light"] :is(.install-command code, .hero-metrics dt) {

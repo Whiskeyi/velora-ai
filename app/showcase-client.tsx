@@ -1267,6 +1267,43 @@ function ComponentDocPanel({
   );
 }
 
+const lightEditorTheme = {
+  plain: {
+    color: "#344054",
+    backgroundColor: "transparent",
+  },
+  styles: [
+    {
+      types: ["comment", "prolog", "doctype", "cdata"],
+      style: { color: "#7a869b", fontStyle: "italic" as const },
+    },
+    {
+      types: ["punctuation", "operator"],
+      style: { color: "#536078" },
+    },
+    {
+      types: ["property", "tag", "constant", "symbol", "deleted"],
+      style: { color: "#9b3f62" },
+    },
+    {
+      types: ["boolean", "number"],
+      style: { color: "#7651b5" },
+    },
+    {
+      types: ["selector", "attr-name", "string", "char", "builtin", "inserted"],
+      style: { color: "#14785b" },
+    },
+    {
+      types: ["function", "class-name"],
+      style: { color: "#315fc1" },
+    },
+    {
+      types: ["keyword"],
+      style: { color: "#6941c6" },
+    },
+  ],
+};
+
 function ComponentWorkbench({
   locale,
   theme,
@@ -1488,6 +1525,7 @@ function ComponentWorkbench({
                 code={activeCode}
                 scope={scope}
                 language="tsx"
+                theme={theme === "light" ? lightEditorTheme : undefined}
                 enableTypeScript
                 noInline
               >
@@ -1957,7 +1995,7 @@ function RuntimeSection({ locale }: { locale: Locale }) {
         </span>
         <h2>{t.title}</h2>
         <p>{t.lede}</p>
-        <div className="runtime-code">
+        <div className="runtime-code glass-panel">
           <div className="runtime-code-bar">
             <span>
               <span className="code-dot code-dot-red" />
