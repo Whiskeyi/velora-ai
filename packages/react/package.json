@@ -84,7 +84,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "katex": "^0.16.22",
+    "katex": "^0.18.1",
     "mermaid": "^11.12.0",
     "react-markdown": "^10.1.0",
     "rehype-katex": "^7.0.1",
