@@ -70,12 +70,12 @@
     "vinext": "0.0.50",
     "vite": "npm:@voidzero-dev/vite-plus-core@0.2.5",
     "vite-plus": "0.2.5",
-    "vitest": "4.1.10",
+    "vitest": "5.0.2",
     "wrangler": "4.92.0"
   },
   "overrides": {
     "vite": "npm:@voidzero-dev/vite-plus-core@0.2.5",
-    "vitest": "4.1.10"
+    "vitest": "5.0.2"
   },
   "engines": {
     "node": "^20.19.0 || ^22.18.0 || >=24.11.0"
