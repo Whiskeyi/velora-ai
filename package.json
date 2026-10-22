@@ -69,7 +69,7 @@
     "typescript": "5.9.3",
     "vinext": "0.0.50",
     "vite": "npm:@voidzero-dev/vite-plus-core@0.2.5",
-    "vite-plus": "0.2.5",
+    "vite-plus": "1.3.0",
     "vitest": "4.1.10",
     "wrangler": "4.92.0"
   },
